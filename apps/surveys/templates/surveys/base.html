@@ -1,0 +1,55 @@
+{% extends "index.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% block page_title %}Sistema de Encuestas{% endblock %}{% endblock %}
+
+{% block stylesheets %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+{% if messages %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        {% for message in messages %}
+            {% if message.tags == 'success' %}
+                const icon = 'success';
+            {% elif message.tags == 'error' or message.tags == 'danger' %}
+                const icon = 'error';
+            {% elif message.tags == 'warning' %}
+                const icon = 'warning';
+            {% elif message.tags == 'info' %}
+                const icon = 'info';
+            {% else %}
+                const icon = 'info';
+            {% endif %}
+            
+            Swal.fire({
+                title: '{{ message.tags|title|default:"Información" }}',
+                text: '{{ message|escapejs }}',
+                icon: icon,
+                position: 'center',
+                showConfirmButton: false,
+                timer: 1500,
+                timerProgressBar: true,
+                width: '32em',
+                padding: '1.25em'
+            });
+        {% endfor %}
+    });
+</script>
+{% endif %}
+{% block extra_css %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <h1 class="mb-4">{% block header %}{% endblock %}</h1>
+
+    {% block page_content %}{% endblock %}
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+{% block extra_js %}{% endblock %}
+{% endblock %}

@@ -1,0 +1,84 @@
+
+<form method="post" enctype="multipart/form-data" class="create-form">
+    {% csrf_token %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header card-header-primary">
+                    <h4 class="card-title">{{ title }}</h4>
+                    <p class="card-category"></p>
+                </div>
+                <div class="card-body">
+                    <div id="message-container"></div>
+                    <table class="table">
+                        {{ form.as_p }}
+                    </table>
+                </div>
+                <div class="card-footer">
+                    <button type="submit" class="btn btn-primary btn-xs">
+                        <i class="material-icons">save</i><br>Guardar
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-xs" data-bs-dismiss="modal">
+                        <i class="material-icons">cancel</i><br>Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+{% block javascripts %}
+<script type="text/javascript">
+    // Inicializar Select2
+    $('.select2').select2({
+        theme: "bootstrap-5",
+        language: "es",
+        width: $(this).data('width') ? $(this).data('width') : $(this).hasClass('w-100') ? '100%' : 'style',
+        placeholder: $(this).data('placeholder'),
+    });
+
+    // Manejar el envío del formulario dentro de la modal
+    $(document).on('submit', '.create-form', function(e) {
+        e.preventDefault(); // Evita el comportamiento predeterminado del formulario
+        var form = $(this);
+
+        // Mostrar la modal de carga
+        $('#loadingModal').modal('show');
+
+        $.ajax({
+            url: form.attr('action'),
+            type: form.attr('method'),
+            data: form.serialize(),
+            success: function(response) {
+                if (response.success) {
+                    // Mostrar el mensaje de éxito
+                    $('#message-container').html('<div class="alert alert-success">' + response.message + '</div>');
+
+                    // Cerrar la modal de carga
+                    $('#loadingModal').modal('hide');
+
+                    // Cerrar la modal de edición después de 2 segundos
+                    setTimeout(function() {
+                        $('#editModal').modal('hide');
+                        location.href = '{{ list_url }}'; // Redirigir a la lista
+                    }, 2000);
+                } else {
+                    // Mostrar mensajes de error
+                    $('#message-container').html('<div class="alert alert-danger">' + response.message + '</div>');
+                    $('#loadingModal').modal('hide');
+                }
+            },
+            error: function(response) {
+                // Mostrar mensajes de error en caso de fallo en la solicitud
+                $('#message-container').html('<div class="alert alert-danger">Error al procesar la solicitud.</div>');
+                $('#loadingModal').modal('hide');
+            }
+        });
+    });
+
+    // Manejar el botón de cancelar
+    $('.BtnCancel').click(function () {
+        location.href = '{{ list_url }}'; // Redirigir a la lista
+    });
+</script>
+{% endblock javascripts %}

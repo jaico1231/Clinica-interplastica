@@ -1,0 +1,9 @@
+{% extends "notifications/config/base_config_list.html" %}
+
+{% block title %}Email Configurations{% endblock %}
+
+{% block content %}
+  {% with title="Email Configurations" create_url=request.resolver_match.namespace|add:":email_config_create" update_url_name=request.resolver_match.namespace|add:":email_config_update" delete_url_name=request.resolver_match.namespace|add:":email_config_delete" %}
+    {{ block.super }}
+  {% endwith %}
+{% endblock %}

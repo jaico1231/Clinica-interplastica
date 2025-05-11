@@ -1,0 +1,61 @@
+{% load i18n %}
+
+<div class="chat-floating-container">
+    <div id="chat-widget" class="chat-widget">
+        <div class="chat-header">
+            <h6 class="mb-0">{% trans "Asistente Virtual" %}</h6>
+            <button type="button" class="btn-close btn-close-white" onclick="toggleChat()"></button>
+        </div>
+        
+        <div class="chat-messages" id="chat-messages">
+            <!-- Mensaje de bienvenida condicional -->
+            {% if not history %}
+            <div class="message-container welcome-message" style="display: none;">
+                <div class="message-bubble bot-message">
+                    ¡Hola! Soy tu asistente virtual. Estoy aquí para ayudarte con:<br><br>
+                    • Información de productos<br>
+                    • Soporte técnico<br>
+                    • Consultas generales<br><br>
+                    ¿En qué puedo asistirte hoy?
+                    <div class="message-time"></div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% for message in history %}
+            <div class="message-container">
+                <div class="message-bubble {% if message.is_bot %}bot-message{% else %}user-message{% endif %}">
+                    {{ message.text|linebreaksbr }}
+                    <div class="message-time">{{ message.timestamp|time }}</div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <div id="typing-indicator" class="message-container" style="display: none;">
+                <div class="message-bubble bot-message">
+                    <div class="typing-indicator">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chat-input-container">
+            <!-- Botones rápidos agregados dinámicamente -->
+            <div class="quick-buttons-container"></div>
+            <div class="input-group">
+                <input type="text" id="chat-input" class="form-control" 
+                       placeholder="{% trans 'Escribe tu mensaje...' %}" autocomplete="off">
+                <button class="btn btn-primary" onclick="sendMessage()">
+                    <i class="material-icons">send</i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <button class="chat-floating-btn" onclick="toggleChat()">
+        <i class="material-icons">chat</i>
+    </button>
+</div>

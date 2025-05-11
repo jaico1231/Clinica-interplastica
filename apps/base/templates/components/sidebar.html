@@ -1,0 +1,102 @@
+{% load static %}
+
+<!-- Sidebar Container -->
+<aside class="sidebar">
+    <!-- Logo Header -->
+    <div class="logo-header" data-background-color="dark">
+        <a href="{% url 'dashboard:home' %}" class="logo">
+            <!-- Logo que cambia según el tema -->
+            <img src="{% static 'assets/img/logos/logo-white.png' %}" 
+                 alt="navbar brand" 
+                 class="navbar-brand logo-light"
+                 loading="lazy"
+                 height="60"
+                 style="display: none;"/> <!-- Initially hidden, will be shown by JavaScript -->
+            <img src="{% static 'assets/img/logos/logo-color.png' %}" 
+                 alt="navbar brand" 
+                 class="navbar-brand logo-dark"
+                 loading="lazy"
+                 height="60"
+                 style="display: none;"/> <!-- Initially hidden, will be shown by JavaScript -->
+        </a>
+                
+        <!-- Topbar Toggle Button - Solo visible en móviles -->
+        <!-- <button class="topbar-toggler more mobile-only" aria-label="Más opciones">
+            <span class="material-symbols-outlined">more_vert</span>
+        </button> -->
+    </div>
+    <!-- End Logo Header -->
+
+    <!-- Sidebar Content -->
+    <div class="sidebar-wrapper scrollbar scrollbar-inner">
+        <nav class="sidebar-content">
+            <ul class="nav nav-secondary">
+                <!-- Dynamic Menu Items -->
+                {% for menu in menus %}
+                    {% if menu.is_active %}
+                        {% for group in menu.group.all %}
+                            {% if group.name in request.user.groups.all|stringformat:'s' %}
+                                <li class="nav-item">
+                                    <a class="nav-link collapse-toggle" 
+                                       href="#{{ menu.name|slugify }}" 
+                                       data-bs-toggle="collapse"
+                                       role="button"
+                                       aria-expanded="false">
+                                        <span class="material-symbols-outlined menu-icon">
+                                            {{ menu.icon }}
+                                        </span>
+                                        <span class="menu-label">{{ menu.name }}</span>
+                                        <span class="material-symbols-outlined caret">
+                                            expand_more
+                                        </span>
+                                    </a>
+                                    <div class="collapse" id="{{ menu.name|slugify }}">
+                                        <ul class="nav nav-collapse">
+                                            {% for item in menu.items.all %}
+                                                {% if item.is_active %}
+                                                    {% for group in item.groups.all %}
+                                                        {% if group.name in request.user.groups.all|stringformat:'s' %}
+                                                            <li class="sidebar-item {% if request.resolver_match.url_name == item.url_name %}active{% endif %}">
+                                                                <a class="sidebar-link" 
+                                                                   href="{% url item.url_name %}" 
+                                                                   aria-current="{% if request.resolver_match.url_name == item.url_name %}page{% else %}false{% endif %}">
+                                                                    {% if item.icon %}
+                                                                        <span class="material-symbols-outlined submenu-icon">
+                                                                            {{ item.icon }}
+                                                                        </span>
+                                                                    {% endif %}
+                                                                    <span class="hide-menu">{{ item.name }}</span>
+                                                                </a>
+                                                            </li>
+                                                        {% endif %}                                                     
+                                                    {% endfor %}
+                                                {% endif %}
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </nav>
+    </div>
+    
+    <!-- Botón flotante de toggle - Solo visible cuando el sidebar está expandido -->
+    <div class="sidebar-toggle" aria-label="Minimizar sidebar">
+        <span class="material-symbols-outlined">
+            chevron_left
+        </span>
+    </div>
+</aside>
+
+<!-- Botón Menú Móvil - Solo visible en dispositivos móviles cuando el sidebar está oculto -->
+<button class="mobile-menu-toggle" aria-label="Abrir menú">
+    <span class="material-symbols-outlined">
+        menu
+    </span>
+</button>
+
+<!-- Overlay para dispositivos móviles -->
+<div class="mobile-overlay"></div>

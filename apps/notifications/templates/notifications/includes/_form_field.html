@@ -1,0 +1,66 @@
+{% comment %}
+Renders a single form field with Bootstrap 5 styling.
+Expects 'field' object in context.
+Handles standard inputs, textareas, selects, and checkboxes.
+{% endcomment %}
+
+{% if field.is_hidden %}
+  {{ field }}
+{% else %}
+  {% if field.widget_type == 'checkboxselectmultiple' or field.widget_type == 'radioselect' %}
+    {# Special handling for multi-checkbox or radio needed if used #}
+    <div class="mb-3 {% if field.errors %}is-invalid{% endif %}">
+      <p class="form-label">{{ field.label }}</p>
+      {% for choice in field %}
+        <div class="form-check">
+          {{ choice.tag }}
+          <label class="form-check-label" for="{{ choice.id_for_label }}">
+            {{ choice.choice_label }}
+          </label>
+        </div>
+      {% endfor %}
+      {% if field.help_text %}<div class="form-text">{{ field.help_text|safe }}</div>{% endif %}
+      {% if field.errors %}
+        <div class="invalid-feedback d-block"> {# d-block needed #}
+          {% for error in field.errors %}{{ error }}{% endfor %}
+        </div>
+      {% endif %}
+    </div>
+    {% elif field.widget_type == 'checkboxinput' or field.widget_type == 'booleanfield' %}
+    {# Checkbox handling #}
+    <div class="form-check mb-3 {% if field.errors %}is-invalid{% endif %}">
+      {{ field }} {# Renders the input checkbox with form-check-input class #}
+      {# --- LÍNEA CORREGIDA (Manual Label) --- #}
+      <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {# --- FIN LÍNEA CORREGIDA --- #}
+      {% if field.help_text %}<div class="form-text mt-1">{{ field.help_text|safe }}</div>{% endif %}
+      {% if field.errors %}
+        <div class="invalid-feedback d-block"> {# d-block needed #}
+          {% for error in field.errors %}{{ error }}{% endfor %}
+        </div>
+      {% endif %}
+    </div>
+  {% else %}
+    {# Default handling for text, email, number, select, textarea, password etc. #}
+    <div class="mb-3 {% if field.errors %}is-invalid{% endif %}">  <!-- Clase is-invalid añadida -->
+      {{ field.label_tag }}
+      {{ field }}
+      {% if field.errors %}
+        <div class="invalid-feedback">  <!-- Mensaje de error mejorado -->
+          {% for error in field.errors %}
+            <div>{{ error }}</div>  <!-- Mostrar errores en líneas separadas -->
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% if field.help_text %}
+        <div class="form-text">
+          {% if field.name == "custom_headers" %}  <!-- Ayuda específica para JSON -->
+            <strong>Formato requerido:</strong> Usa llaves {} y comillas dobles. Ejemplo: {"X-Priority": 1}
+          {% else %}
+            {{ field.help_text|safe }}
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endif %}

@@ -1,0 +1,196 @@
+/* light-theme.css */
+/* @import url('../css/components/layout.css'); */
+@import url('../css/components/headers.css');
+@import url('../css/components/sidebar.css');
+@import url('../css/components/main.css');
+
+/* =============================================
+   light-theme.css - Variables globales
+   ============================================= */
+   :root {
+    /* --- COLORES BASE --- */
+    /* Textos */
+    --text-primary: #2A2F5B;    /* Azul oscuro principal */
+    --text-secondary: #495057;  /* Gris oscuro */
+    --text-tertiary: #95aac9;   /* Gris azulado */
+    --text-light: #ffffff;      /* Blanco puro */
+    --text-dark: #333333;       /* Negro suave */
+    --text-muted: #686f76;      /* Gris atenuado */
+  
+    /* Fondos */
+    --bg-primary: #c5cbd4;      /* Blanco puro */
+    --bg-secondary: #ffffff;    /* Gris claro */
+    --bg-tertiary: #ffffff;     /* Gris medio */
+    --bg-cuarter: #80808000;     /* Gris medio */
+  
+    /* Boton Toggle */
+    --switch-track-bg: linear-gradient(145deg, #BBDEFB, #004e8d);
+    --switch-track-active-bg: linear-gradient(145deg, #63ef50, #E53935);
+    --switch-knob-bg: #f80b0b;
+
+    /* Bordes */
+    --border-light: #eaeaea;    /* Gris claro */
+    --border-medium: #dee2e6;   /* Gris medio */
+    --border-dark: #ced4da;     /* Gris oscuro */
+  
+    /* --- COLORES ACCENT --- */
+    --accent-primary: #1572E8;        /* Azul eléctrico */
+    --accent-primary-dark: #1269DB;   /* Azul oscuro */
+    --accent-success: #28a745;        /* Verde */
+    --accent-info: #17a2b8;           /* Cian */
+    --accent-warning: #ffc107;        /* Amarillo */
+    --accent-danger: #dc3545;         /* Rojo */
+  
+    /* --- SOMBRA --- */
+    --shadow-sm: 0 1px 1px 0 rgba(0,0,0,0.07);
+    --shadow-md: 0 0.5rem 1rem rgba(0,0,0,0.15);
+    --shadow-lg: 0 1rem 3rem rgba(0,0,0,0.175);
+    --shadow-none: none;
+  
+    /* --- TIPOGRAFÍA --- */
+    --font-family-base: 'Public Sans', sans-serif;
+    --font-size-base: 14px;
+    --font-size-sm: 13px;
+    --font-size-xs: 11px;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-bold: 600;
+    --line-height-base: 1.5;
+    --line-height-lg: 1.82;
+  
+    /* --- ESPACIADOS --- */
+    --spacing-xs: 0.25rem;  /* 4px */
+    --spacing-sm: 0.5rem;   /* 8px */
+    --spacing-md: 1rem;     /* 16px */
+    --spacing-lg: 1.5rem;   /* 24px */
+    --spacing-xl: 2rem;     /* 32px */
+  
+    /* --- TAMAÑOS COMPONENTES --- */
+    --header-height: 70px; /* Altura del header */
+    --footer-height: 100px;
+    --sidebar-width: 265px;
+    --sidebar-collapsed-width: 70px;
+  
+    /* --- BORDES REDONDOS --- */
+    --border-radius-sm: 0.2rem;  /* 3.2px */
+    --border-radius: 0.25rem;    /* 4px */
+    --border-radius-lg: 0.5rem;  /* 8px */
+    --border-radius-xl: 0.75rem; /* 12px */
+  
+    /* --- TRANSICIONES --- */
+    --transition-base: 0.3s ease;
+    --transition-fast: 0.2s ease;
+    
+    /* --- TABLAS --- */
+    --table-bg: var(--bg-tertiary) ;               /* Azul claro */
+    --table-stripe-bg: var(--bg-primary);
+    --table-border: var(--border-medium);
+    --table-text: var(--text-dark);
+    --table-head-bg: var(--accent-primary);
+    --table-head-text: var(--text-light);
+  
+    /* --- DATATABLES --- */
+    --dt-bg: var(--bg-secondary);
+    --dt-text: var(--text-dark);
+    --dt-border: var(--border-medium);
+    --dt-header-bg: var(--accent-primary);
+    --dt-header-text: var(--text-light);
+    --dt-stripe-bg: var(--bg-secondary);
+    --dt-hover-bg: rgba(48,138,221,0.08);
+    --dt-control-bg: var(--bg-tertiary);
+    --dt-pagination-active: var(--accent-primary);
+    --dt-pagination-hover: var(--bg-tertiary);
+    --dt-row-selected: var(--accent-primary);
+    --dt-row-selected-text: var(--text-light);
+    --dt-row-selected-link: var(--table-bg);
+    --dt-column-ordering: var(--accent-primary);
+    --dt-row-stripe: var(--accent-primary);
+    --dt-row-hover: #e3f2fd;
+    --dt-input-bg: var(--bg-primary);
+    --dt-input-border: var(--border-medium);
+  
+    /* --- BOTONES --- */
+    --btn-primary-bg: var(--accent-primary);
+    --btn-primary-text: var(--text-light);
+    --btn-success-bg: var(--accent-success);
+    --btn-success-text: var(--text-light);
+  
+    /* --- DROPDOWN --- */
+    --dropdown-bg: var(--bg-primary);
+    --dropdown-text: var(--text-dark);
+    --dropdown-hover-bg: var(--bg-secondary);
+    --dropdown-border: var(--border-medium);
+  
+    /* --- SIDEBAR --- */
+    --sidebar-bg: #d0cdcd;               /* Gris oscuro */
+    --sidebar-light-bg: var(--bg-secondary);
+    --sidebar-item-bg: var(--sidebar-bg);
+    --sidebar-item-light-bg: #e2e6ea;
+    --sidebar-submenu-bg: #b0b0b0;
+    --sidebar-submenu-light-bg: #eaedf0;
+    --sidebar-header-bg: rgba(255,255,255,0.63);
+    --sidebar-header-light-bg: var(--bg-tertiary);
+    --sidebar-active-light-bg: rgba(0,0,0,0.1);
+    --sidebar-active-bg: rgb(75, 74, 74);
+    --sidebar-active-text: var(--text-light);
+    --sidebar-hover-bg: var(--sidebar-hover-bg);
+    --sidebar-hover-light-bg: #d9dde2;
+    --sidebar-text: var(--text-dark);
+    --sidebar-text-light: var(--text-dark);
+    --sidebar-icon: var(--text-dark);
+    --sidebar-icon-light: var(--text-secondary);
+    --sidebar-shadow: 0 0 10px rgba(0,0,0,0.1);
+    --transition-base: var(--transition-base);
+    --sidebar-width: 265px; /* Ancho de la barra lateral */
+    --sidebar-collapsed-width: 70px;
+
+  
+    /* --- HEADER --- */
+     --header-height: 80px;
+     --header-bg: var(--bg-primary);
+     --header-bg-light: var(--light-bg);
+     --header-text: var(--text-primary);
+     --header-text-light: var(--text-dark);
+     --header-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+     --header-transition-speed: 0.3s;     
+     /* Variables para coordinación header-sidebar */
+     --main-content-padding-top: calc(var(--header-height) + 10px);
+  
+    /* --- USUARIO --- */
+    --user-dropdown-width: 300px;
+    --user-dropdown-min-width: 280px;
+    --user-dropdown-max-width: 320px;
+    --user-dropdown-border-radius: 10px;
+    --user-dropdown-shadow: 0 0 30px rgba(0,0,0,0.15);
+    --user-dropdown-margin-top: 10px;
+    --user-box-bg: rgba(0,0,0,0.02);
+    --user-box-dark-bg: rgba(255,255,255,0.02);
+    --user-box-padding: 1.5rem;
+    --avatar-lg-size: 80px;
+    --avatar-lg-mobile-size: 60px;
+    --avatar-border-radius: 10px;
+    --user-info-padding: 1rem;
+    --user-name-font-size: 1.2rem;
+    --user-name-font-weight: 600;
+    --user-email-font-size: 0.9rem;
+    --user-email-margin: 0.25rem;
+    --profile-btn-font-size: 0.85rem;
+    --profile-btn-padding: 0.35rem 0.75rem;
+    --profile-btn-radius: 6px;
+    --profile-btn-weight: 500;
+    --profile-btn-transition: 0.3s;
+    --dropdown-content-padding: 0.75rem 0;
+    --dropdown-item-padding: 0.75rem 1.5rem;
+    --dropdown-item-hover-bg: rgba(0,0,0,0.04);
+    --dropdown-item-hover-dark-bg: rgba(255,255,255,0.05);
+    --dropdown-icon-margin: 0.75rem;
+    --dropdown-icon-size: 1.25rem;
+    --dropdown-icon-opacity: 0.7;
+    --dropdown-divider-margin: 0.5rem 0;
+    --dropdown-divider-opacity: 0.1;
+  
+    /* --- COLORES ESPECIALES --- */
+    --danger: var(--accent-danger);
+    --danger-light: #f8d7da;
+    --dark-bg-secondary: #343a40;
+  }

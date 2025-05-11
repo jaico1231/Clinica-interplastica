@@ -1,0 +1,106 @@
+{% comment %}
+  dashboard/templates/dashboard/components/model_selector.html
+  Componente para seleccionar modelos de datos
+{% endcomment %}
+
+<div class="card mb-3">
+  <div class="card-header">
+    <h5 class="card-title mb-0">Fuente de datos</h5>
+  </div>
+  <div class="card-body">
+    <div class="mb-3">
+      <label for="modelSelect" class="form-label">Seleccionar modelo</label>
+      <select class="form-select" id="modelSelect" name="model" required>
+        <option value="">Seleccionar modelo...</option>
+        
+        {% if models|length > 0 %}
+          <!-- Primero mostrar modelos auditados (marcados con *) -->
+          <optgroup label="Modelos principales">
+            {% for model in models %}
+              {% if model.is_audit_model %}
+                <option value="{{ model.app_label }}.{{ model.model_name }}" 
+                        data-app-label="{{ model.app_label }}"
+                        data-model-name="{{ model.model_name }}"
+                        data-content-type-id="{{ model.content_type_id }}"
+                        class="fw-bold">
+                  {{ model.verbose_name }} ({{ model.object_count }} registros)
+                </option>
+              {% endif %}
+            {% endfor %}
+          </optgroup>
+          
+          <!-- Luego mostrar el resto de modelos -->
+          <optgroup label="Otros modelos">
+            {% for model in models %}
+              {% if not model.is_audit_model %}
+                <option value="{{ model.app_label }}.{{ model.model_name }}" 
+                        data-app-label="{{ model.app_label }}"
+                        data-model-name="{{ model.model_name }}"
+                        data-content-type-id="{{ model.content_type_id }}">
+                  {{ model.verbose_name }} ({{ model.object_count }} registros)
+                </option>
+              {% endif %}
+            {% endfor %}
+          </optgroup>
+        {% else %}
+          <option value="" disabled>No hay modelos disponibles</option>
+        {% endif %}
+      </select>
+      <input type="hidden" id="modelContentTypeId" name="model_content_type_id">
+      <div class="form-text">Selecciona el modelo de datos para el gráfico.</div>
+    </div>
+    
+    <div id="fieldsContainer" class="d-none">
+      <div class="mb-3">
+        <label for="xAxisField" class="form-label">Campo para eje X</label>
+        <select class="form-select" id="xAxisField" name="x_axis_field">
+          <option value="">Seleccionar campo...</option>
+        </select>
+        <div class="form-text">Eje horizontal o categorías del gráfico.</div>
+      </div>
+      
+      <div class="mb-3">
+        <label for="yAxisField" class="form-label">Campo para eje Y / Valor</label>
+        <select class="form-select" id="yAxisField" name="y_axis_field">
+          <option value="">Seleccionar campo...</option>
+          <option value="count">Conteo de registros</option>
+        </select>
+        <div class="form-text">Eje vertical o valores del gráfico.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/**
+ * Muestra el contenedor de campos
+ */
+function showFieldsContainer() {
+  document.getElementById('fieldsContainer').classList.remove('d-none');
+}
+
+/**
+ * Oculta el contenedor de campos
+ */
+function hideFieldsContainer() {
+  document.getElementById('fieldsContainer').classList.add('d-none');
+}
+
+/**
+ * Inicializa el selector de modelos con Tippy.js si está disponible
+ */
+document.addEventListener('DOMContentLoaded', function() {
+  // Inicializar Select2 si está disponible
+  if (typeof $.fn.select2 !== 'undefined') {
+    $('#modelSelect, #xAxisField, #yAxisField').select2({
+      width: '100%',
+      placeholder: 'Seleccionar...'
+    });
+  }
+  
+  // Inicializar tooltips para campos
+  if (typeof tippy !== 'undefined') {
+    tippy('[data-tippy-content]');
+  }
+});
+</script>

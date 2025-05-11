@@ -1,0 +1,24 @@
+<div class="card">
+    <div class="card-header">
+        <h5>{{ chart.title }}</h5>
+    </div>
+    <div class="card-body">
+        <div id="chart-container">
+            <!-- Render your chart here using the chart_config -->
+            <canvas id="myChart"></canvas>
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-primary" onclick="updateChart()">Actualizar Gráfico</button>
+    </div>
+</div>
+
+<script>
+    function updateChart() {
+        // Logic to update the chart based on new data or configuration
+    }
+
+    // Initialize the chart using the chart_config
+    const ctx = document.getElementById('myChart').getContext('2d');
+    const myChart = new Chart(ctx, {{ chart_config|safe }});
+</script>

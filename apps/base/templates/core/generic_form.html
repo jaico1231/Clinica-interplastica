@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title">{{ title }}</h5>
+    </div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            {% if form.errors %}
+            <div class="alert alert-danger">
+                Por favor, corrija los errores señalados a continuación.
+            </div>
+            {% endif %}
+            
+            {% crispy form %}
+            
+            <div class="form-group mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Guardar
+                </button>
+                
+                <a href="{{ view.get_success_url }}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancelar
+                </a>
+                
+                {% block extra_buttons %}
+                {% endblock %}
+            </div>
+        </form>
+    </div>
+    <div class="card-footer text-muted">
+        {% if object %}
+            <div class="row small">
+                <div class="col-md-6">
+                    {% if object.created_by %}
+                    <p>Creado por: {{ object.created_by }} ({{ object.created_at|date:"d/m/Y H:i" }})</p>
+                    {% endif %}
+                </div>
+                <div class="col-md-6 text-end">
+                    {% if object.modified_by %}
+                    <p>Última modificación: {{ object.modified_by }} ({{ object.modified_at|date:"d/m/Y H:i" }})</p>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% block js_extra %}
+{% endblock %}
+{% endblock %}

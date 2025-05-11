@@ -1,0 +1,631 @@
+/* =============================================
+SIDEBAR.CSS - v6 - AJUSTES ADICIONALES
+Controla la apariencia y comportamiento del sidebar de navegación.
+Incorpora: Submenú oscuro, scroll H/V, alineación fija y responsiva.
+Integra variables de :root (light-theme.css).
+============================================= */
+
+/* =============================================
+1. CONFIGURACIÓN GLOBAL DEL SIDEBAR
+============================================= */
+
+.sidebar *,
+.sidebar *::before,
+.sidebar *::after {
+    box-sizing: border-box;
+}
+
+/* =============================================
+    2. ESTRUCTURA PRINCIPAL DEL SIDEBAR
+    ============================================= */
+
+/* Contenedor principal del sidebar */
+.sidebar {
+    width: var(--sidebar-width);
+    transition: width var(--transition-base) ease, 
+                left var(--transition-base) ease,
+                transform var(--transition-base) ease,
+                visibility 0s linear var(--transition-base),
+                opacity var(--transition-base) ease;
+    /* REQ: Sidebar Estático */
+    position: fixed; /* Fija el sidebar en la pantalla */
+    top: 0;
+    left: 0;
+    display: block; /* REQ: Mantiene bloque lineal */
+    height: 100vh;
+    z-index: 1002;
+    color: var(--sidebar-text);
+    font-weight: var(--font-weight-normal);
+    background-color: var(--sidebar-bg);
+    box-shadow: var(--sidebar-shadow);
+    overflow: hidden; /* Evita scroll en el sidebar principal */
+    box-sizing: border-box;
+}
+
+/* Contenedor de desplazamiento para el contenido del sidebar */
+.sidebar-wrapper.scrollbar-inner {
+    height: 100%; 
+    width: 100%;
+    /* REQ: Scroll Vertical */
+    overflow-y: auto; /* Habilita scroll vertical cuando el contenido excede la altura */
+    /* REQ: Scroll Horizontal (cuando sea necesario) */
+    overflow-x: auto; /* Habilita scroll horizontal SI el contenido excede el ancho */
+    padding-top: var(--header-height); 
+    padding-bottom: 60px; 
+    /* Estilos de scrollbar en Sección 10 */
+}
+
+/* Adaptación al tema claro */
+.theme-light .sidebar {
+    background-color: var(--sidebar-light-bg);
+    color: var(--sidebar-text-light);
+}
+
+/* Contenedor de desplazamiento para el contenido del sidebar */
+.sidebar-wrapper {
+    height: calc(100vh - var(--header-height)); /* Usar variable para consistencia */
+    overflow-y: auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Contenedor del contenido del sidebar (nav tag in template) */
+.sidebar-content {
+    padding: 0 var(--spacing-sm); 
+    margin: 0; 
+    width: 100%;
+    /* min-width: fit-content; Ayuda a que el scroll horizontal funcione con el contenido */
+}
+
+/* Reseteo de estilos para listas de navegación */
+.sidebar .nav,
+.sidebar .nav-item,
+.sidebar .collapse,
+.sidebar .nav-collapse,
+.sidebar .sidebar-content,
+.sidebar-content ul { 
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+}
+
+/* Sección de perfil de usuario (Opcional) */
+.sidebar .user, 
+.sidebar[data-background-color="white"] .user {
+    padding: var(--spacing-md); 
+    border-top: 1px solid var(--border-light); 
+    border-bottom: 1px solid var(--border-light); 
+    display: block;
+    margin: 0 var(--spacing-md); 
+}
+
+/* =============================================
+    3. ESTILOS DEL HEADER Y LOGO
+    ============================================= */
+
+/* Contenedor del logo y botones del header */
+.logo-header {
+    /* REQ: Logo Estático (fijo dentro del sidebar) */
+    position: absolute; /* Posición fija relativa al .sidebar */
+    top: 0;
+    left: 0;
+    width: 100%; /* Ocupa todo el ancho del sidebar */
+    background-color: var(--sidebar-header-bg);
+    padding: 0 var(--spacing-md); 
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: var(--header-height);
+    border-bottom: 1px solid var(--sidebar-border-color); 
+    z-index: 1003; /* Encima del contenido del sidebar */
+}
+
+/* Contenedor del logo */
+.logo-header .logo {
+    display: flex;
+    align-items: center;
+    height: 100%; 
+    text-decoration: none; 
+}
+
+/* Gestión de imágenes del logo */
+.logo-header .logo img {
+    max-height: calc(var(--header-height) - var(--spacing-md)); 
+    width: auto;
+    transition: opacity var(--transition-base) ease; 
+    display: block; 
+}
+
+/* Botones de control en el header (nav-toggle, topbar-toggler) */
+.logo-header .nav-toggle, 
+.logo-header .topbar-toggler { 
+    color: var(--sidebar-text);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0; 
+    width: 35px; 
+    height: 35px;
+    border-radius: 50%;
+    display: inline-flex; 
+    align-items: center;
+    justify-content: center;
+    transition: background-color var(--transition-fast); 
+}
+
+/* Efectos hover para botones */
+.logo-header .nav-toggle:hover,
+.logo-header .topbar-toggler:hover {
+    background-color: var(--sidebar-hover-bg); 
+}
+
+/* Botón especial topbar-toggler 'more' (Mantener si se usa) */
+.topbar-toggler.more {
+    background-color: rgba(255, 255, 255, 0.1); 
+    position: absolute; 
+    right: var(--spacing-lg); 
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    z-index: 1003; 
+    border: none;
+    color: var(--sidebar-text);
+    /* Hereda tamaño y display de la regla anterior */
+}
+
+/* Iconos dentro del botón topbar-toggler 'more' */
+.topbar-toggler.more i, 
+.topbar-toggler.more .gg-more-vertical-alt, 
+.topbar-toggler.more .material-symbols-outlined { 
+    font-size: 20px;
+    display: block;
+}
+
+/* =============================================
+    4. ELEMENTOS DE NAVEGACIÓN
+    ============================================= */
+
+/* Elementos de navegación principal (li.nav-item) */
+.sidebar .nav > .nav-item { 
+    padding: 0;
+    margin: 0; 
+    position: relative; 
+}
+
+/* Enlaces principales del menú (a.nav-link) */
+.sidebar .nav-item > a.nav-link {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-sm) var(--spacing-md); 
+    border-radius: var(--sidebar-item-radius); 
+    margin: var(--spacing-xs) 0; 
+    width: 100%;
+    background-color: transparent; 
+    transition: background-color var(--transition-fast) ease, color var(--transition-fast) ease; 
+    color: var(--sidebar-text);
+    text-decoration: none;
+    cursor: pointer; 
+}
+
+/* Efecto hover para enlaces principales */
+.sidebar .nav-item > a.nav-link:hover {
+    background-color: var(--sidebar-hover-bg); 
+    color: var(--sidebar-text-hover); 
+}
+
+/* Contenedor de submenús (div.collapse) */
+.sidebar .collapse {
+    padding-left: 0;
+    background-color: var(--sidebar-submenu-bg);
+    border-radius: 0;
+    margin: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Lista de submenús (ul.nav-collapse) */
+.sidebar .nav-collapse {
+    padding-left: calc(var(--spacing-md) + 24px + var(--spacing-sm)); 
+    /* REQ: Submenú más oscuro */
+    /* Asegúrate de definir --sidebar-submenu-bg en :root 
+        con un color ligeramente más oscuro que --sidebar-bg */
+    background-color: var(--sidebar-submenu-bg, rgba(0,0,0,0.05)); /* Fallback si no está definida */
+    margin: var(--spacing-xs) 0 var(--spacing-sm) 0; /* Ajuste de margen */
+}
+
+/* Items individuales del submenú (li.sidebar-item) */
+.sidebar .sidebar-item { 
+    padding: 0;
+    /* list-style: none;  */
+}
+
+/* Enlaces dentro del submenú (a.sidebar-link) */
+.sidebar .sidebar-link { 
+    display: flex; 
+    align-items: center; 
+    padding: var(--spacing-sm) var(--spacing-md); 
+    border-radius: var(--sidebar-item-radius); 
+    transition: background-color var(--transition-fast) ease, color var(--transition-fast) ease; 
+    color: var(--sidebar-submenu-text); 
+    text-decoration: none;
+    font-size: var(--font-size-sm); 
+    cursor: pointer; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+}
+
+/* Efecto hover para enlaces del submenú */
+.sidebar .sidebar-link:hover {
+    background-color: var(--sidebar-hover-bg); 
+    color: var(--sidebar-submenu-text-hover); 
+}
+
+/* Estilos para ítems activos */
+.sidebar .nav-item.active > a.nav-link {
+    background-color: var(--sidebar-active-bg); 
+    font-weight: var(--font-weight-medium); 
+    color: var(--sidebar-active-text); 
+}
+.sidebar .nav-collapse .sidebar-item.active > a.sidebar-link {
+    background-color: transparent; 
+    font-weight: var(--font-weight-medium); 
+    color: var(--sidebar-active-submenu-text); 
+}
+
+/* =============================================
+    5. ICONOS Y ELEMENTOS VISUALES
+    ============================================= */
+
+/* Iconos de Material Symbols */
+.sidebar .material-symbols-outlined {
+    margin-right: var(--spacing-sm); 
+    font-size: 20px; 
+    width: 24px; 
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--sidebar-icon-color); 
+    flex-shrink: 0; 
+    vertical-align: middle; 
+    transition: color var(--transition-fast);
+}
+/* Active icon colors */
+.sidebar .nav-item.active > a.nav-link .material-symbols-outlined {
+    color: var(--sidebar-active-icon-color); 
+}
+.sidebar .nav-collapse .sidebar-item.active > a.sidebar-link .material-symbols-outlined {
+    color: var(--sidebar-active-submenu-text); 
+}
+
+/* Indicador de submenú (flecha) */
+.sidebar .caret {
+    margin-left: auto; 
+    transition: transform var(--transition-base); 
+    font-size: 1.1rem; 
+    display: inline-block; 
+}
+
+/* Rotación de la flecha cuando el menú está expandido */
+.sidebar .nav-link[aria-expanded="true"] .caret {
+    transform: rotate(180deg);
+}
+
+/* Iconos personalizados (gg-* - Mantener si se usan) */
+.gg-menu-right,
+.gg-menu-left,
+.gg-more-vertical-alt {
+    display: inline-block;
+    box-sizing: border-box;
+    position: relative;
+    width: 20px;
+    height: 20px;
+    transform: scale(0.8);
+    color: var(--sidebar-text); 
+}
+
+/* Etiquetas de texto */
+.menu-label, 
+.hide-menu { 
+    flex-grow: 1; 
+    white-space: nowrap; /* Evita el salto de línea, activa scroll horizontal si es largo */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-left: var(--spacing-xs); 
+}
+
+/* =============================================
+    6. ESTADOS DEL SIDEBAR (COLAPSADO/MINIMIZADO & HOVER-EXPAND)
+    ============================================= */
+
+/* Estado colapsado/minimizado */
+.sidebar-collapsed,
+.sidebar-minimize .sidebar {
+    width: var(--sidebar-collapsed-width);
+    overflow: hidden; /* Oculta contenido, permite hover */
+}
+
+/* Ocultar elementos de texto cuando está colapsado */
+.sidebar-collapsed .menu-label,
+.sidebar-collapsed .hide-menu,
+.sidebar-collapsed .caret,
+.sidebar-minimize .sidebar .menu-label,
+.sidebar-minimize .sidebar .hide-menu,
+.sidebar-minimize .sidebar .caret,
+.sidebar-collapsed .user span, 
+.sidebar-minimize .sidebar .user span {
+    opacity: 0;
+    width: 0;
+    margin-left: 0; 
+    overflow: hidden;
+    transition: opacity var(--transition-fast) ease, width var(--transition-fast) ease;
+    display: none; 
+}
+
+/* Ajustes para enlaces e iconos cuando el sidebar está colapsado */
+.sidebar-collapsed .nav-item > a.nav-link,
+.sidebar-minimize .sidebar .nav-item > a.nav-link {
+    justify-content: center; 
+    padding-left: 0;
+    padding-right: 0;
+}
+.sidebar-collapsed .nav-item > a.nav-link .material-symbols-outlined,
+.sidebar-minimize .sidebar .nav-item > a.nav-link .material-symbols-outlined {
+    margin-right: 0; 
+    font-size: 1.3rem; 
+}
+
+/* Ocultar submenús en estado colapsado */
+.sidebar-collapsed .nav-collapse,
+.sidebar-minimize .sidebar .nav-collapse {
+    display: none !important;
+}
+
+/* --- Hover-to-Expand Functionality --- */
+.sidebar-collapsed:hover,
+.sidebar-minimize .sidebar:hover {
+    width: var(--sidebar-width);
+    overflow: visible; /* Permite ver contenido expandido */
+    box-shadow: var(--shadow-lg); 
+}
+
+.sidebar-collapsed:hover .menu-label,
+.sidebar-collapsed:hover .hide-menu,
+.sidebar-collapsed:hover .caret,
+.sidebar-minimize .sidebar:hover .menu-label,
+.sidebar-minimize .sidebar:hover .hide-menu,
+.sidebar-minimize .sidebar:hover .caret,
+.sidebar-collapsed:hover .user span,
+.sidebar-minimize .sidebar:hover .user span {
+    display: inline-block; 
+    opacity: 1;
+    width: auto; 
+    margin-left: var(--spacing-xs); 
+}
+
+.sidebar-collapsed:hover .nav-item > a.nav-link .material-symbols-outlined,
+.sidebar-minimize .sidebar:hover .nav-item > a.nav-link .material-symbols-outlined {
+    margin-right: var(--spacing-sm); 
+    font-size: 20px; 
+}
+.sidebar-collapsed:hover .nav-item > a.nav-link,
+.sidebar-minimize .sidebar:hover .nav-item > a.nav-link {
+    justify-content: flex-start; 
+    padding-left: var(--spacing-md);
+    padding-right: var(--spacing-md);
+}
+/* --- End Hover-to-Expand --- */
+
+/* Estado oculto del sidebar (using .hide-sidebar on body) */
+.hide-sidebar .sidebar {
+    /* REQ: Bloque Lineal al Ocultar (se logra con left y transition) */
+    left: calc(-1 * var(--sidebar-width)); 
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-100%); 
+}
+
+/* =============================================
+   7. PANEL PRINCIPAL Y AJUSTES DE LAYOUT
+   ============================================= */
+/* Ajustes para el panel principal */
+.main-panel {
+    margin-left: var(--sidebar-width );
+    width: calc(100% - var(--sidebar-width));
+    transition: all var(--transition-speed) ease;
+    padding-top: calc(var(--header-height) + 30px);
+    padding-bottom: var(--spacing-lg);
+    padding-left: var(--spacing-md);
+    padding-right: var(--spacing-md);
+    min-height: 100vh;
+}
+
+.search-card{
+    margin-top: var(--spacing-md);
+}
+
+.dataTables_filter{
+    text-align: right;
+}
+.align-items-stretch{
+    padding: var(--spacing-md);
+}
+
+/* Ajustes cuando el sidebar está colapsado */
+.sidebar-collapsed ~ .main-panel,
+.sidebar-minimize .main-panel {
+    margin-left: var(--sidebar-collapsed-width);
+    width: calc(100% - var(--sidebar-collapsed-width));
+}
+
+/* Ajustes cuando el sidebar está oculto */
+.sidebar-hidden ~ .main-panel,
+.hide-sidebar .main-panel {
+    margin-left: 0 !important;
+    width: 100% !important;
+}
+
+/* =============================================
+    9. SOPORTE PARA MÓVILES (relacionado con sidebar)
+    ============================================= */
+
+/* Botón flotante para abrir el sidebar en móviles */
+.mobile-menu-toggle {
+    position: fixed;
+    bottom: var(--spacing-lg); 
+    right: var(--spacing-lg); 
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: var(--sidebar-header-bg); 
+    color: var(--sidebar-text);
+    display: none; 
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1010; 
+    border: none;
+    box-shadow: var(--shadow-md); 
+}
+.mobile-menu-toggle .material-symbols-outlined {
+    font-size: 24px; 
+}
+
+/* Overlay semi-transparente para móviles */
+.mobile-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1001; 
+    display: none; 
+    opacity: 0;
+    transition: opacity var(--transition-base) ease; 
+}
+
+/* Estado del sidebar cuando está visible en móvil */
+.show-mobile-sidebar .sidebar {
+    left: 0; 
+    box-shadow: var(--shadow-lg); 
+}
+
+/* Mostrar overlay cuando el sidebar está abierto en móvil */
+.show-mobile-sidebar .mobile-overlay {
+    display: block;
+    opacity: 1;
+}
+
+/* Media queries para diseño responsivo del sidebar */
+@media (max-width: 991.98px) {
+    .sidebar {
+        left: calc(-1 * var(--sidebar-width)); 
+        transition: left var(--transition-base) ease; 
+    }
+    
+    .mobile-menu-toggle {
+        display: flex; 
+    }
+    
+    .sidebar-toggle {
+        display: none;
+    }
+}
+
+/* =============================================
+    10. ACCESIBILIDAD Y SCROLLBAR
+    ============================================= */
+
+/* Estilos para navegación accesible (Focus) */
+.sidebar .nav-link:focus,
+.sidebar .sidebar-link:focus {
+    outline: 2px solid var(--focus-ring-color); 
+    outline-offset: 2px; 
+    background-color: var(--sidebar-hover-bg); 
+}
+
+/* Estilo moderno de scrollbar para el sidebar wrapper */
+.sidebar-wrapper.scrollbar-inner { 
+    scrollbar-width: thin; 
+    scrollbar-color: var(--scrollbar-thumb-color) transparent; 
+}
+
+/* Webkit scrollbar styles */
+.sidebar-wrapper.scrollbar-inner::-webkit-scrollbar {
+    width: 5px; 
+    height: 5px; /* Añadido para scroll horizontal */
+}
+.sidebar-wrapper.scrollbar-inner::-webkit-scrollbar-track {
+    background: transparent; 
+}
+.sidebar-wrapper.scrollbar-inner::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb-color); 
+    border-radius: 10px; 
+    border: none; 
+}
+
+/* Tema claro - scrollbar */
+.theme-light .sidebar-wrapper.scrollbar-inner {
+    scrollbar-color: var(--light-scrollbar-thumb-color) transparent;
+}
+.theme-light .sidebar-wrapper.scrollbar-inner::-webkit-scrollbar-thumb {
+    background-color: var(--light-scrollbar-thumb-color); 
+}
+
+/* =============================================
+    11. COMPONENTES ESPECÍFICOS DEL SIDEBAR
+    ============================================= */
+
+/* Ajustes específicos para el logo en sidebar minimizado/collapsed */
+.sidebar-minimize .logo-header .logo img,
+.sidebar-collapsed .logo-header .logo img {
+    max-height: 40px; 
+    transition: max-height var(--transition-base); 
+}
+
+/* Botón para alternar el estado del sidebar (expandido/colapsado) - Bottom Toggle */
+.sidebar-toggle {
+    position: absolute;
+    bottom: var(--spacing-lg); 
+    left: 100%; 
+    transform: translateX(-50%); 
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: var(--sidebar-toggle-bg); 
+    color: var(--sidebar-toggle-icon-color); 
+    display: flex; 
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1005; 
+    border: 1px solid var(--sidebar-toggle-border-color); 
+    box-shadow: var(--shadow-sm); 
+    transition: background-color var(--transition-fast), transform var(--transition-base) ease, opacity var(--transition-base) ease; 
+    opacity: 1; 
+}
+
+/* Efecto hover */
+.sidebar-toggle:hover {
+    background-color: var(--sidebar-toggle-hover-bg); 
+}
+
+/* Icono dentro del botón toggle */
+.sidebar-toggle .material-symbols-outlined {
+    font-size: 20px;
+    transition: transform var(--transition-base); 
+    width: auto; 
+    margin: 0; 
+    color: inherit; 
+}
+
+/* Rotate toggle button icon when sidebar is minimized/collapsed */
+.sidebar-minimize .sidebar-toggle .material-symbols-outlined,
+.sidebar-collapsed .sidebar-toggle .material-symbols-outlined {
+    transform: rotate(180deg); 
+}
+/* Hide toggle button when sidebar is fully hidden */
+.hide-sidebar .sidebar-toggle {
+    opacity: 0;
+    pointer-events: none;
+}

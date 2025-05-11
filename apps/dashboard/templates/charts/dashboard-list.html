@@ -1,0 +1,258 @@
+{% extends 'charts/base.html' %}
+
+{% block title %}Dashboards | Chart Suite{% endblock %}
+
+{% block page_title %}Mis Dashboards{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'charts:dashboard_create' %}" class="btn btn-primary">
+    <i class="fas fa-plus me-1"></i> Nuevo Dashboard
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    {% for dashboard in dashboards %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center bg-transparent">
+                <div>
+                    <span class="badge bg-light text-dark">
+                        <i class="fas fa-chart-line me-1"></i> {{ dashboard.widgets.count }} widgets
+                    </span>
+                    {% if dashboard.is_default %}
+                    <span class="ms-1 badge bg-primary">
+                        <i class="fas fa-star me-1"></i> Predeterminado
+                    </span>
+                    {% endif %}
+                </div>
+                
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary" type="button" 
+                            id="dashboardActions{{ dashboard.id }}" data-bs-toggle="dropdown" 
+                            aria-expanded="false">
+                        <i class="fas fa-ellipsis-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dashboardActions{{ dashboard.id }}">
+                        <li>
+                            <a class="dropdown-item" href="{% url 'charts:dashboard_update' dashboard.id %}">
+                                <i class="fas fa-edit me-2 text-muted"></i> Editar
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#" 
+                               onclick="setDefaultDashboard({{ dashboard.id }}, this); return false;">
+                                {% if dashboard.is_default %}
+                                <i class="fas fa-star me-2 text-warning"></i> Quitar predeterminado
+                                {% else %}
+                                <i class="far fa-star me-2 text-muted"></i> Establecer predeterminado
+                                {% endif %}
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="{% url 'charts:dashboard_delete' dashboard.id %}">
+                                <i class="fas fa-trash-alt me-2"></i> Eliminar
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Previsualización del dashboard -->
+            <a href="{% url 'charts:dashboard_detail' dashboard.id %}" class="text-decoration-none">
+                <div class="dashboard-preview p-3" style="height: 180px; background-color: #f8f9fa; position: relative;">
+                    {% if dashboard.widgets.count > 0 %}
+                    <div class="dashboard-thumbnail d-flex flex-wrap gap-2 h-100">
+                        {% for widget in dashboard.widgets.all|slice:":6" %}
+                        <div class="bg-white shadow-sm rounded flex-grow-1" style="min-width: 25%; max-width: 45%; height: 45%;">
+                            <div class="p-2 bg-light rounded-top" style="height: 25%;">
+                                <div class="small text-truncate text-muted">{{ widget.saved_chart.title|truncatechars:10 }}</div>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-center" style="height: 75%;">
+                                {% with type=widget.saved_chart.chart_type.code %}
+                                {% if type == 'bar' %}
+                                <i class="fas fa-chart-bar text-primary"></i>
+                                {% elif type == 'line' %}
+                                <i class="fas fa-chart-line text-success"></i>
+                                {% elif type == 'pie' %}
+                                <i class="fas fa-chart-pie text-danger"></i>
+                                {% elif type == 'scatter' %}
+                                <i class="fas fa-braille text-info"></i>
+                                {% else %}
+                                <i class="fas fa-chart-line text-secondary"></i>
+                                {% endif %}
+                                {% endwith %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                        
+                        {% if dashboard.widgets.count > 6 %}
+                        <div class="bg-white shadow-sm rounded d-flex align-items-center justify-content-center" 
+                             style="min-width: 25%; max-width: 45%; height: 45%;">
+                            <span class="badge bg-secondary">+{{ dashboard.widgets.count|add:"-6" }} más</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="d-flex align-items-center justify-content-center h-100">
+                        <div class="text-center text-muted">
+                            <i class="fas fa-chart-line mb-2 fs-3"></i>
+                            <p>No hay widgets en este dashboard</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </a>
+            
+            <!-- Contenido de la tarjeta -->
+            <div class="card-body">
+                <h5 class="card-title">
+                    <a href="{% url 'charts:dashboard_detail' dashboard.id %}" class="text-decoration-none text-dark">
+                        {{ dashboard.name }}
+                    </a>
+                </h5>
+                {% if dashboard.description %}
+                <p class="card-text text-muted small">{{ dashboard.description|truncatechars:80 }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Pie con metadatos -->
+            <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                    Actualizado: {{ dashboard.modified_at|date:"d/m/Y" }}
+                </small>
+                <div>
+                    <a href="{% url 'charts:dashboard_detail' dashboard.id %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-eye me-1"></i> Ver
+                    </a>
+                    <a href="{% url 'charts:dashboard_widget_create' dashboard.id %}" class="btn btn-sm btn-success">
+                        <i class="fas fa-plus me-1"></i> Añadir Widget
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-tachometer-alt text-muted fs-1 mb-3"></i>
+                <h4 class="mb-3">No hay dashboards</h4>
+                <p class="text-muted mb-4">Crea tu primer dashboard para organizar tus gráficos.</p>
+                <a href="{% url 'charts:dashboard_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i> Crear nuevo dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Paginación -->
+{% if dashboards.paginator.num_pages > 1 %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="Paginación de dashboards">
+            <ul class="pagination justify-content-center">
+                {% if dashboards.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1" aria-label="Primera">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ dashboards.previous_page_number }}" aria-label="Anterior">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Primera">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Anterior">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+                
+                {% for i in dashboards.paginator.page_range %}
+                    {% if dashboards.number == i %}
+                    <li class="page-item active"><a class="page-link" href="#">{{ i }}</a></li>
+                    {% elif i > dashboards.number|add:'-3' and i < dashboards.number|add:'3' %}
+                    <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if dashboards.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ dashboards.next_page_number }}" aria-label="Siguiente">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ dashboards.paginator.num_pages }}" aria-label="Última">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Siguiente">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Última">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Función para establecer dashboard predeterminado
+    function setDefaultDashboard(dashboardId, element) {
+        // Enviar solicitud AJAX
+        sendAjaxRequest(
+            `/charts/api/dashboards/${dashboardId}/set_default/`,
+            'POST',
+            {},
+            function(response) {
+                // Mostrar notificación
+                alert('Dashboard predeterminado actualizado correctamente.');
+                
+                // Actualizar UI
+                // 1. Quitar badge "Predeterminado" de todos los dashboards
+                $('.badge.bg-primary i.fas.fa-star').closest('.badge').remove();
+                
+                // 2. Actualizar textos de menús desplegables
+                $('.dropdown-item i.fas.fa-star').removeClass('fas text-warning').addClass('far text-muted')
+                    .closest('.dropdown-item').html('<i class="far fa-star me-2 text-muted"></i> Establecer predeterminado');
+                
+                // 3. Añadir indicador al dashboard seleccionado
+                const cardHeader = $(element).closest('.card').find('.card-header div:first-child');
+                cardHeader.append(`
+                    <span class="ms-1 badge bg-primary">
+                        <i class="fas fa-star me-1"></i> Predeterminado
+                    </span>
+                `);
+                
+                // 4. Actualizar el menú del elemento seleccionado
+                $(element).html('<i class="fas fa-star me-2 text-warning"></i> Quitar predeterminado');
+            },
+            function(xhr, status, error) {
+                alert('Error al establecer el dashboard predeterminado: ' + error);
+            }
+        );
+    }
+</script>
+{% endblock %}

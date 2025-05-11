@@ -1,0 +1,199 @@
+{% extends "surveys/base.html" %}
+{% load i18n %}
+{% load static %}
+{% load custom_filters %}
+{% block page_title %}{{ survey.title }} - {% trans "Survey Detail" %}{% endblock %}
+
+{% block header %}{{ survey.title }}{% endblock %}
+{% block extra_css %}
+
+{% endblock %}
+{% block page_content %}
+<!-- Cabecera con Detalles del Cuestionario -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <p class="text-muted">
+            {% if survey.is_published %}
+            <span class="badge bg-success">{% trans "Published" %}</span>
+            {% else %}
+            <span class="badge bg-secondary">{% trans "Draft" %}</span>
+            {% endif %}
+            {% if survey.start_date and survey.end_date %}
+            <span class="ms-2">{% trans "Active period:" %} {{ survey.start_date|date:"d M, Y" }} - {{ survey.end_date|date:"d M, Y" }}</span>
+            {% endif %}
+        </p>
+        <div class="mb-3">{{ survey.description|linebreaks }}</div>
+    </div>
+    <div class="col-md-4 text-md-end d-flex flex-column justify-content-between">
+        <div>
+            <h4>{% trans "Survey Statistics" %}</h4>
+            <p><strong>{% trans "Questions:" %}</strong> {{ survey.question_count }}</p>
+            <p><strong>{% trans "Responses:" %}</strong> {{ response_count }}</p>
+        </div>
+        <!-- Example split danger button -->
+        <div class="btn-group">
+            <button type="button" class="btn btn-primary EditSurveyBtn"><i class="bi bi-pencil-square"></i> {% trans "Edit" %}</button>
+            <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+            <span class="visually-hidden">Toggle Dropdown</span>
+            </button>
+            <ul class="dropdown-menu">
+            {% if not survey.is_published %}
+            <li>
+                <button type="button" class="dropdown-item PublishBtn">
+                    <i class="bi bi-check2-circle"></i> {% trans "Publicar Encuesta" %}
+                </button>
+            </li>
+            {% else %}
+            <li>
+                <button type="button" class="dropdown-item UnpublishBtn">
+                    <i class="bi bi-check2-circle"></i> {% trans "Despublica Encuesta" %}
+                </button>
+            </li>
+            {% endif %}
+            <li>
+                <button type="button" class="dropdown-item PreviewBtn">
+                    <i class="bi bi-eye"></i> {% trans "Encuesta Previa" %}
+                </button>
+            </li>
+            <li>
+                <button type="button" class="dropdown-item ResponsesBtn">
+                    <i class="bi bi-list-ul"></i> {% trans "Ver Respuestas" %}
+                </button>
+            </li>
+            <li>
+                <button type="button" class="dropdown-item ExportBtn">
+                    <i class="bi bi-download"></i> {% trans "Exportar Encuesta" %}
+                </button>
+                
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <button type="button" class="dropdown-item DelBtn">
+                    <i class="bi bi-trash"></i> {% trans "Eliminar encuesta" %}
+                </button>
+            </li>
+            </ul>
+        </div>
+        
+    </div>
+</div>
+<!-- Fin Cabecera con Detalles del Cuestionario -->
+
+<!-- Sección de Preguntas -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="h4 mb-0">{% trans "Survey Questions" %}</h2>
+        <button type="button" class="btn btn-sm btn-success AddQuestionBtn" >
+            <i class="bi bi-plus-circle"></i> {% trans "Add Question" %}
+        </button>
+    </div>
+    <div class="card-body">
+        {% if questions %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th width="5%">#</th>
+                            <th width="40%">{% trans "Question" %}</th>
+                            <th width="15%">{% trans "Type" %}</th>
+                            <th width="10%">{% trans "Required" %}</th>
+                            <th width="15%">{% trans "Options" %}</th>
+                            <th width="15%" class="text-end">{% trans "Actions" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="questions-list" class="sortable">
+                        {% for question in questions %}
+                        <tr id="question-{{ question.id }}" data-id="{{ question.id }}">
+                            <td>{{ question.order }}</td>
+                            <td>
+                                <strong>{{ question.text }}</strong>
+                                {% if question.help_text %}
+                                    <p class="text-muted small mb-0">{{ question.help_text }}</p>
+                                {% endif %}
+                            </td>
+                            <td>{{ question.question_type.name }}</td>
+                            <td>
+                                {% if question.is_required %}
+                                <span class="badge bg-info">{% trans "Required" %}</span>
+                                {% else %}
+                                <span class="badge bg-light text-dark">{% trans "Optional" %}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if question.has_choices %}
+                                    <button type="button" class="btn btn-sm btn-outline-info ViewChoicesBtn" data-question-id="{{ question.id }}">
+                                        <i class="bi bi-list-ul me-1"></i> {{ question.choices.count }} {% trans "options" %}
+                                    </button>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-primary edit-question" 
+                                            data-question-id="{{ question.id }}" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#editQuestionModal-{{ question.id }}">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#deleteQuestionModal-{{ question.id }}">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <div class="mb-3">
+                    <i class="bi bi-card-checklist text-muted" style="font-size: 3rem;"></i>
+                </div>
+                <h3>{% trans "No questions added yet" %}</h3>
+                <p class="text-muted">{% trans "Start building your survey by adding questions." %}</p>
+                <button type="button" class="btn btn-primary mt-2 FirstQuestionBtn">
+                    <i class="bi bi-plus-circle"></i> {% trans "Add Your First Question" %}
+                </button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+<!-- Fin Sección de Preguntas -->
+{% endblock %}
+{% block extra_js %}
+<script>
+    // Define URLs for JavaScript
+    const SURVEY_URLS = {
+        edit: "{% url 'encuestas:survey_update' survey.id %}",
+        publish: "{% url 'encuestas:survey_publish' survey.id %}",
+        unpublish: "{% url 'encuestas:survey_unpublish' survey.id %}",
+        preview: "{% url 'encuestas:survey_preview' survey.id %}",
+        responses: "{% url 'encuestas:survey_responses' survey.id %}",
+        export: "{% url 'encuestas:survey_pdf_export' survey.id %}?format=pdf",
+        delete: "{% url 'encuestas:survey_delete' survey.id %}",
+        addQuestion: "{% url 'encuestas:question_create' survey.id %}",
+
+
+        //////////////////////////////////////////////////////////////////
+        edit: "{% url 'encuestas:survey_update' survey.id %}",
+        publish: "{% url 'encuestas:survey_publish' survey.id %}",
+        unpublish: "{% url 'encuestas:survey_unpublish' survey.id %}",
+        preview: "{% url 'encuestas:survey_preview' survey.id %}",
+        responses: "{% url 'encuestas:survey_responses' survey.id %}",
+        export: "{% url 'encuestas:survey_pdf_export' survey.id %}?format=pdf",
+        delete: "{% url 'encuestas:survey_delete' survey.id %}",
+        addQuestion: "{% url 'encuestas:question_create' survey.id %}",
+        getHierarchyItems: "/api/questions/{questionId}/hierarchy-items/",
+        addHierarchyItem: "/api/questions/{questionId}/hierarchy-items/create/",
+        updateHierarchyItem: "/api/hierarchy-items/{itemId}/update/",
+        deleteHierarchyItem: "/api/hierarchy-items/{itemId}/delete/",
+        reorderHierarchyItems: "/api/questions/{questionId}/hierarchy-items/reorder/",
+        //////////////////////////////////////////////////////////////////
+    };
+</script>
+<script src="{% static 'assets/js/surveys/survey_detail.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,361 @@
+{% extends 'index.html'%}
+
+{% block title %} {{ title }} {% endblock %}
+
+{% load static %}
+{% load custom_filters %}
+{% block stylesheets %}
+<!-- <link href="https://cdn.datatables.net/v/bs5/dt-1.13.8/datatables.min.css" rel="stylesheet"> -->
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<!-- <link rel="stylesheet" href="{% static 'assets/css/components/list.css' %}" /> -->
+
+
+{% endblock stylesheets %}
+
+{% block content %}
+{% csrf_token %}
+{% if messages %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {% for message in messages %}
+                {% if message.tags == 'success' %}
+                    const icon = 'success';
+                {% elif message.tags == 'error' or message.tags == 'danger' %}
+                    const icon = 'error';
+                {% elif message.tags == 'warning' %}
+                    const icon = 'warning';
+                {% elif message.tags == 'info' %}
+                    const icon = 'info';
+                {% else %}
+                    const icon = 'info';
+                {% endif %}
+                
+                Swal.fire({
+                    title: '{{ message.tags|title|default:"Información" }}',
+                    text: '{{ message|escapejs }}',
+                    icon: icon,
+                    position: 'center',
+                    showConfirmButton: false,
+                    timer: 1500,
+                    timerProgressBar: true,
+                    width: '32em',
+                    padding: '1.25em'
+                });
+            {% endfor %}
+        });
+    </script>
+{% endif %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header card-header-primary">
+                <h4 class="card-title">{{ title }}</h4>
+            </div>
+            <div class="card-body">
+                <div class="container-fluid">
+                    <!-- 1. Añadir sección de búsqueda avanzada -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="card search-card">
+                                <div class="card-header card-header-primary">
+                                    <h4 class="card-title"> Búsqueda avanzada</h5>
+                                </div>
+                                <div class="card-body">
+                                    
+                                    
+                                    <form method="get" action="" class="row g-3 search-form">
+                                        <!-- Búsqueda normal -->
+                                        <div class="col-md-4">
+                                            <label for="search" class="form-label">Buscar coincidencias</label>
+                                            <input type="text" class="form-control" id="search" name="search" 
+                                                   value="{{ search_term }}" placeholder="Buscar...">
+                                        </div>
+                                        
+                                        
+                                        
+                                        <div class="col-md-1 d-flex align-items-end">
+                                            <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 3. Añadir indicador de filtros activos -->
+                    {% if search_term or exclude_term or request.GET.missing or request.GET.without_purchases or request.GET.inactive %}
+                    <div class="alert alert-info mb-3">
+                        <h6 class="mb-1">Filtros activos:</h6>
+                        <div class="d-flex flex-wrap gap-2 filter-badges">
+                            {% if search_term %}
+                            <span class="badge bg-primary">
+                                Coincide con: {{ search_term }}
+                                <a href="?{% for key, value in request.GET.items %}{% if key != 'search' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="text-white ms-1"><i class="material-icons" style="font-size: 14px;">close</i></a>
+                            </span>
+                            {% endif %}
+                            
+                            {% if exclude_term %}
+                            <span class="badge bg-warning text-dark">
+                                NO coincide con: {{ exclude_term }}
+                                <a href="?{% for key, value in request.GET.items %}{% if key != 'exclude_search' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="text-dark ms-1"><i class="material-icons" style="font-size: 14px;">close</i></a>
+                            </span>
+                            {% endif %}
+                            
+                            {% if request.GET.missing %}
+                            <span class="badge bg-danger">
+                                {% if request.GET.missing == 'email' %}Sin correo electrónico
+                                {% elif request.GET.missing == 'phone' %}Sin teléfono
+                                {% elif request.GET.missing == 'address' %}Sin dirección
+                                {% endif %}
+                                <a href="?{% for key, value in request.GET.items %}{% if key != 'missing' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="text-white ms-1"><i class="material-icons" style="font-size: 14px;">close</i></a>
+                            </span>
+                            {% endif %}
+                            
+                            {% if request.GET.without_purchases %}
+                            <span class="badge bg-secondary">
+                                Sin compras
+                                <a href="?{% for key, value in request.GET.items %}{% if key != 'without_purchases' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="text-white ms-1"><i class="material-icons" style="font-size: 14px;">close</i></a>
+                            </span>
+                            {% endif %}
+                            
+                            {% if request.GET.inactive %}
+                            <span class="badge bg-dark">
+                                Inactivos > 6 meses
+                                <a href="?{% for key, value in request.GET.items %}{% if key != 'inactive' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="text-white ms-1"><i class="material-icons" style="font-size: 14px;">close</i></a>
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="row">
+                        <div class="col-lg-12 d-flex align-items-stretch">
+                            <div class="card w-100">
+                                <div class="card-body">
+                                    <div class="d-sm-flex d-block align-items-center justify-content-between mb-9">
+                                        <div class="card-body">
+                                            
+                                            {% if msg %}
+                                                <span class="text-danger">{{ msg | safe }}</span>
+                                            {% else %}
+                                                
+                                            {% endif %}  
+                                            <!-- Agregar y exportar botones -->
+                                            <div class="d-sm-flex d-block align-items-center justify-content-between mb-9">
+                                                <div class="mb-3">
+                                                    {% for add in Btn_Add %}
+                                                    <button type="button" class="btn btn-primary Btn{{ add.name }}">
+                                                        <i class="material-icons btn-xs" style="color: {{ add.color2|default:'white' }};">{{ add.icon }}</i> {{ add.label }}
+                                                    </button>
+                                                    {% endfor %}
+                                                    
+                                                    <!-- 2. Añadir botones para filtros rápidos de ausencias -->
+                                                    <div class="btn-group export-dropdown d-inline-block">
+                                                        <button type="button" class="btn btn-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                                            <i class="material-icons btn-xs">filter_alt</i> Filtros especiales
+                                                        </button>
+                                                        <ul class="dropdown-menu">
+                                                            <li><a class="dropdown-item" href="?missing=email"><i class="material-icons btn-xs">mail_outline</i> Sin correo</a></li>
+                                                            <li><a class="dropdown-item" href="?missing=phone"><i class="material-icons btn-xs">phone_disabled</i> Sin teléfono</a></li>
+                                                            <li><a class="dropdown-item" href="?missing=address"><i class="material-icons btn-xs">location_off</i> Sin dirección</a></li>
+                                                            <li><hr class="dropdown-divider"></li>
+                                                            <li><a class="dropdown-item" href="?without_purchases=true"><i class="material-icons btn-xs">shopping_cart_off</i> Sin compras</a></li>
+                                                            <li><a class="dropdown-item" href="?inactive=true"><i class="material-icons btn-xs">do_not_disturb</i> Inactivos > 6 meses</a></li>
+                                                        </ul>
+                                                    </div>
+                                                    
+                                                    <!-- Botón para limpiar filtros -->
+                                                    <a href="{{ request.path }}" class="btn btn-outline-secondary">
+                                                        <i class="material-icons btn-xs">clear_all</i> Limpiar filtros
+                                                    </a>
+                                                    
+                                                    {% if url_export %}
+                                                    <div class="btn-group export-dropdown d-inline-block">
+                                                        <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                            <i class="material-icons btn-xs">download</i> Exportar
+                                                        </button>
+                                                        <ul class="dropdown-menu">
+                                                            <li><a class="dropdown-item" href="{% url url_export %}?format=csv"><i class="material-icons btn-xs">description</i> CSV</a></li>
+                                                            <li><a class="dropdown-item" href="{% url url_export %}?format=excel"><i class="material-icons btn-xs">table_chart</i> Excel</a></li>
+                                                            <li><a class="dropdown-item" href="{% url url_export %}?format=pdf"><i class="material-icons btn-xs">picture_as_pdf</i> PDF</a></li>
+                                                        </ul>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="profile-container">
+                                                <div class="table-responsive">
+                                                    <table class="table table-striped" style="width:100%" id="data">
+                                                        <thead>
+                                                            <tr>
+                                                                <th></th>
+                                                                {% for header in headers %}
+                                                                <th>{{ header }}</th>
+                                                                {% endfor %}
+                                                                {% if use_toggle %}
+                                                                <th>ACTIVO</th>
+                                                                {% endif %}
+                                                                <th>ACCIONES</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for obj in object_list %}
+                                                            <tr>
+                                                                <td></td>
+                                                                {% for field in fields %}
+                                                                <td>{{ obj|getattr_filter:field }}</td>
+                                                                {% endfor %}
+                                                                {% if use_toggle %}
+                                                                <td>
+                                                                    <div class="form-check form-switch">
+                                                                        <input class="form-check-input switch-estado" type="checkbox" 
+                                                                            data-id="{{ obj.pk }}"
+                                                                            data-app="{{ toggle_app_name }}"
+                                                                            data-model="{{ toggle_model_name }}"
+                                                                            {% if obj.is_active %} checked {% endif %}>
+                                                                    </div>
+                                                                </td>
+                                                                {% endif %}
+                                                                <td>
+                                                                    {% for action in actions %}
+                                                                    <button class="btn btn-{{ action.color }} btn-xs Btn{{ action.name }}" data-id="{{ obj.pk }}" type="button">
+                                                                        <i class="material-icons btn-xs" style="color: {{ action.color2 }};">{{ action.icon }}</i> {{ action.label }}
+                                                                    </button>
+                                                                    {% endfor %}
+                                                                </td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                    
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block javascripts %}
+<script>
+    $(document).ready(function() {
+    var table = new DataTable('#data', {
+        responsive: true,
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-MX.json' // Actualizado a versión más reciente
+        }
+    });
+});
+</script>
+{% if url_export %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Manejo personalizado para posicionamiento del menú
+    document.querySelectorAll('.export-dropdown .dropdown-toggle').forEach(dropdown => {
+        dropdown.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const menu = dropdown.nextElementSibling;
+            menu.classList.toggle('show');
+            menu.style.top = `${dropdown.getBoundingClientRect().bottom + window.scrollY}px`;
+            menu.style.left = `${dropdown.getBoundingClientRect().left + window.scrollX}px`;
+        });
+    });
+
+    // Cierre al hacer clic fuera
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.export-dropdown')) {
+            document.querySelectorAll('.export-dropdown .dropdown-menu').forEach(m => m.classList.remove('show'));
+        }
+    });
+});
+</script>
+{% endif %}
+{% if use_toggle %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Función para obtener CSRF Token desde meta tag (más seguro)
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]').content;
+    }
+
+    const switches = document.querySelectorAll('.switch-estado');
+    const csrftoken = getCsrfToken();
+
+    switches.forEach(switchElem => {
+        switchElem.addEventListener('change', async (e) => {
+            const { checked, dataset: { id, app, model } } = e.target;
+            const url = `/toggle-status/${app}/${model}/${id}/`;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ estado: checked })
+                });
+
+                if (!response.ok) throw new Error(await response.text());
+
+                const data = await response.json();
+                if (data.success) {
+                    Swal.fire('Éxito', data.message, 'success');
+                    location.reload();
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                Swal.fire('Error', error.message, 'error');
+                e.target.checked = !checked; // Revertir estado
+            }
+        });
+    });
+});
+</script>
+{% endif %}
+<!-- botones -->
+<script>
+$(document).ready(function() {
+    {% for add in Btn_Add %}
+    $('.Btn{{ add.name }}').click(function() {        
+        var url = "{% url add.url %}";
+        var btn = $(this)[0];
+        {% if add.modal %}
+            loadModalAndHandleForm(btn, url);
+        {% else %}
+            location.href = url;
+        {% endif %}
+    });
+    {% endfor %}
+        
+    {% for action in actions %}
+    $('.Btn{{ action.name }}').click(function () {
+        var btn = $(this)[0];
+        {% if action.no_requires_id|default:False %}
+            var url = "{% url action.url %}";
+        {% else %}
+            var id = $(this).attr('data-id');
+            var url = "{% url action.url 0 %}".replace('0', id);
+        {% endif %}
+        
+        {% if action.modal %}
+            loadModalAndHandleForm(btn, url);
+        {% else %}
+            location.href = url;
+        {% endif %}
+    });
+    {% endfor %}
+});   
+</script>
+
+{% endblock javascripts %}

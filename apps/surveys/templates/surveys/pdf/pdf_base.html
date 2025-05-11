@@ -1,0 +1,184 @@
+<!-- surveys/pdf/pdf_base.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ survey.title }}</title>
+    <style>
+        @page {
+            size: a4 portrait;
+            margin: 2cm;
+            @top-center {
+                content: "{{ survey.title }}";
+                font-size: 10pt;
+                font-family: Arial, sans-serif;
+            }
+            @bottom-center {
+                content: "Página " counter(page) " de " counter(pages);
+                font-size: 10pt;
+                font-family: Arial, sans-serif;
+            }
+        }
+        
+        html {
+            font-family: Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 10px;
+        }
+        
+        .survey-title {
+            font-size: 18pt;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .survey-description {
+            color: #666;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+        
+        .info-block {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+        }
+        
+        .info-block p {
+            margin: 5px 0;
+        }
+        
+        .question-container {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #eee;
+            page-break-inside: avoid;
+        }
+        
+        .question-text {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .question-description {
+            color: #666;
+            font-style: italic;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+        
+        .choices {
+            margin-left: 20px;
+        }
+        
+        .choice-item {
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .checkbox {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 1px solid #000;
+            margin-right: 8px;
+        }
+        
+        .checkbox.checked {
+            background-color: #000;
+        }
+        
+        .choice-text {
+            display: inline-block;
+        }
+        
+        .answer-field {
+            border: 1px solid #ccc;
+            min-height: 25px;
+            width: 100%;
+            padding: 5px;
+            margin-top: 5px;
+            box-sizing: border-box;
+        }
+        
+        .answer-text {
+            color: #333;
+            margin-top: 5px;
+            font-style: italic;
+            background-color: #f9f9f9;
+            padding: 5px;
+            border-left: 3px solid #ddd;
+        }
+        
+        .footer-note {
+            margin-top: 30px;
+            font-size: 10pt;
+            color: #666;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+        
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        
+        .table th, .table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        
+        h3 {
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+            margin-top: 25px;
+        }
+        
+        .respondent-info {
+            margin-bottom: 25px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="survey-title">{{ survey.title }}</div>
+    </div>
+    
+    <div class="survey-description">{{ survey.description }}</div>
+    
+    <div class="info-block">
+        <p><strong>Fecha Inicio:</strong> {{ survey.start_date|date:"d/m/Y" }}</p>
+        {% if survey.end_date %}
+        <p><strong>Fecha Fin:</strong> {{ survey.end_date|date:"d/m/Y" }}</p>
+        {% endif %}
+    </div>
+    
+    {% block content %}{% endblock %}
+    
+    <div class="footer-note">
+        <p>Documento generado el {{ now|date:"d/m/Y H:i" }}</p>
+    </div>
+</body>
+</html>

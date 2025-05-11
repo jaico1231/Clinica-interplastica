@@ -1,0 +1,605 @@
+{% extends 'index.html'%}
+
+{% block title %} {{ title }} {% endblock %}
+
+{% load static %}
+{% load custom_filters %}
+{% block stylesheets %}
+<!-- <link href="https://cdn.datatables.net/v/bs5/dt-1.13.8/datatables.min.css" rel="stylesheet"> -->
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<link rel="stylesheet" href="{% static 'assets/css/components/list.css' %}" />
+
+<!-- Estilos para el dropdown de exportación -->
+<style>
+    /* Estilos para el botón de exportar usando variables personalizadas */
+    .export-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    
+    /* Botón principal de exportar */
+    .export-dropdown .btn-success {
+      background-color: var(--btn-success-bg);
+      color: var(--btn-success-text);
+      border-color: var(--btn-success-bg);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .export-dropdown .btn-success:hover {
+      background-color: var(--btn-success-bg);
+      filter: brightness(90%);
+      border-color: var(--btn-success-bg);
+    }
+    
+    /* Menú desplegable */
+    .export-dropdown .dropdown-menu {
+      min-width: 10rem;
+      padding: 0.5rem 0;
+      margin: 0.125rem 0 0;
+      background-color: var(--dropdown-bg);
+      color: var(--dropdown-text);
+      text-align: left;
+      background-clip: padding-box;
+      border: 1px solid var(--dropdown-border);
+      border-radius: 0.25rem;
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+      z-index: 1050;
+    }
+    
+    /* Visibilidad cuando está abierto */
+    .export-dropdown .dropdown-menu.show {
+      display: block;
+    }
+    
+    /* Items del dropdown */
+    .export-dropdown .dropdown-item {
+      display: flex;
+      align-items: center;
+      padding: 0.5rem 1.5rem;
+      clear: both;
+      font-weight: 400;
+      color: var(--dropdown-text);
+      text-align: inherit;
+      white-space: nowrap;
+      background-color: transparent;
+      border: 0;
+      gap: 0.5rem;
+    }
+    
+    /* Hover en items */
+    .export-dropdown .dropdown-item:hover, 
+    .export-dropdown .dropdown-item:focus {
+      color: var(--dropdown-text);
+      text-decoration: none;
+      background-color: var(--dropdown-hover-bg);
+    }
+    
+    /* Active en items */
+    .export-dropdown .dropdown-item.active, 
+    .export-dropdown .dropdown-item:active {
+      color: var(--btn-primary-text);
+      text-decoration: none;
+      background-color: var(--btn-primary-bg);
+    }
+    
+    /* Íconos de material */
+    .export-dropdown .material-icons.btn-xs {
+      font-size: 18px;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    
+    /* Estilos para badges de filtros activos */
+    .filter-badges .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5em 0.75em;
+        margin-right: 0.5em;
+        margin-bottom: 0.5em;
+    }
+    
+    .filter-badges .badge a {
+        margin-left: 0.5em;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0.8;
+    }
+    
+    .filter-badges .badge a:hover {
+        opacity: 1;
+    }
+    
+    /* Estilos para la card de búsqueda avanzada */
+    .search-card {
+        margin-bottom: 1.5rem;
+        border-radius: 0.5rem;
+        border: 1px solid var(--card-border);
+    }
+    
+    .search-card .card-title {
+        margin-bottom: 1rem;
+        font-size: 1.1rem;
+        font-weight: 500;
+    }
+    
+    /* Gap para los elementos del formulario */
+    .search-form .col-md-1,
+    .search-form .col-md-3,
+    .search-form .col-md-4 {
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock stylesheets %}
+
+{% block content %}
+{% csrf_token %}
+{% if messages %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {% for message in messages %}
+                {% if message.tags == 'success' %}
+                    const icon = 'success';
+                {% elif message.tags == 'error' or message.tags == 'danger' %}
+                    const icon = 'error';
+                {% elif message.tags == 'warning' %}
+                    const icon = 'warning';
+                {% elif message.tags == 'info' %}
+                    const icon = 'info';
+                {% else %}
+                    const icon = 'info';
+                {% endif %}
+                
+                Swal.fire({
+                    title: '{{ message.tags|title|default:"Información" }}',
+                    text: '{{ message|escapejs }}',
+                    icon: icon,
+                    position: 'center',
+                    showConfirmButton: false,
+                    timer: 1500,
+                    timerProgressBar: true,
+                    width: '32em',
+                    padding: '1.25em'
+                });
+            {% endfor %}
+        });
+    </script>
+{% endif %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header card-header-primary">
+                <h4 class="card-title">{{ title }}</h4>
+            </div>
+            <div class="card-body">
+                <div class="container-fluid">
+                    <!-- 1. Añadir sección de búsqueda avanzada -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="card search-card">
+                                <div class="card-header card-header-primary">
+                                    <h4 class="card-title"> Búsqueda avanzada</h5>
+                                </div>
+                                <div class="card-body">
+                                    
+                                    
+                                    <form method="get" action="" class="row g-3 search-form">
+                                        <!-- Búsqueda normal -->
+                                        <div class="col-md-4">
+                                            <label for="search" class="form-label">Buscar coincidencias</label>
+                                            <input type="text" class="form-control" id="search" name="search" 
+                                                   value="{{ search_term }}" placeholder="Buscar...">
+                                        </div>
+                                        
+                                        
+                                        
+                                        <div class="col-md-1 d-flex align-items-end">
+                                            <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 3. Añadir indicador de filtros activos -->
+                    {% if search_term or exclude_term or request.GET.missing or request.GET.without_purchases or request.GET.inactive %}
+                    <div class="alert alert-info mb-3">
+                        <h6 class="mb-1">Filtros activos:</h6>
+                        <div class="d-flex flex-wrap gap-2 filter-badges">
+                            {% if search_term %}
+                            <span class="badge bg-primary">
+                                Coincide con: {{ search_term }}
+                                <a href="?{% for key, value in request.GET.items %}{% if key != 'search' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="text-white ms-1"><i class="material-icons" style="font-size: 14px;">close</i></a>
+                            </span>
+                            {% endif %}
+                            
+                            {% if exclude_term %}
+                            <span class="badge bg-warning text-dark">
+                                NO coincide con: {{ exclude_term }}
+                                <a href="?{% for key, value in request.GET.items %}{% if key != 'exclude_search' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="text-dark ms-1"><i class="material-icons" style="font-size: 14px;">close</i></a>
+                            </span>
+                            {% endif %}
+                            
+                            {% if request.GET.missing %}
+                            <span class="badge bg-danger">
+                                {% if request.GET.missing == 'email' %}Sin correo electrónico
+                                {% elif request.GET.missing == 'phone' %}Sin teléfono
+                                {% elif request.GET.missing == 'address' %}Sin dirección
+                                {% endif %}
+                                <a href="?{% for key, value in request.GET.items %}{% if key != 'missing' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="text-white ms-1"><i class="material-icons" style="font-size: 14px;">close</i></a>
+                            </span>
+                            {% endif %}
+                            
+                            {% if request.GET.without_purchases %}
+                            <span class="badge bg-secondary">
+                                Sin compras
+                                <a href="?{% for key, value in request.GET.items %}{% if key != 'without_purchases' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="text-white ms-1"><i class="material-icons" style="font-size: 14px;">close</i></a>
+                            </span>
+                            {% endif %}
+                            
+                            {% if request.GET.inactive %}
+                            <span class="badge bg-dark">
+                                Inactivos > 6 meses
+                                <a href="?{% for key, value in request.GET.items %}{% if key != 'inactive' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="text-white ms-1"><i class="material-icons" style="font-size: 14px;">close</i></a>
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="row">
+                        <div class="col-lg-12 d-flex align-items-stretch">
+                            <div class="card w-100">
+                                <div class="card-body">
+                                    <div class="d-sm-flex d-block align-items-center justify-content-between mb-9">
+                                        <div class="card-body">
+                                            
+                                            {% if msg %}
+                                                <span class="text-danger">{{ msg | safe }}</span>
+                                            {% else %}
+                                                
+                                            {% endif %}  
+                                            <!-- Agregar y exportar botones -->
+                                            <div class="d-sm-flex d-block align-items-center justify-content-between mb-9">
+                                                <div class="mb-3">
+                                                    {% for add in Btn_Add %}
+                                                    <button type="button" class="btn btn-primary Btn{{ add.name }}">
+                                                        <i class="material-icons btn-xs" style="color: {{ add.color2|default:'white' }};">{{ add.icon }}</i> {{ add.label }}
+                                                    </button>
+                                                    {% endfor %}
+                                                    
+                                                    <!-- 2. Añadir botones para filtros rápidos de ausencias -->
+                                                    <div class="btn-group export-dropdown d-inline-block">
+                                                        <button type="button" class="btn btn-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                                            <i class="material-icons btn-xs">filter_alt</i> Filtros especiales
+                                                        </button>
+                                                        <ul class="dropdown-menu">
+                                                            <li><a class="dropdown-item" href="?missing=email"><i class="material-icons btn-xs">mail_outline</i> Sin correo</a></li>
+                                                            <li><a class="dropdown-item" href="?missing=phone"><i class="material-icons btn-xs">phone_disabled</i> Sin teléfono</a></li>
+                                                            <li><a class="dropdown-item" href="?missing=address"><i class="material-icons btn-xs">location_off</i> Sin dirección</a></li>
+                                                            <li><hr class="dropdown-divider"></li>
+                                                            <li><a class="dropdown-item" href="?without_purchases=true"><i class="material-icons btn-xs">shopping_cart_off</i> Sin compras</a></li>
+                                                            <li><a class="dropdown-item" href="?inactive=true"><i class="material-icons btn-xs">do_not_disturb</i> Inactivos > 6 meses</a></li>
+                                                        </ul>
+                                                    </div>
+                                                    
+                                                    <!-- Botón para limpiar filtros -->
+                                                    <a href="{{ request.path }}" class="btn btn-outline-secondary">
+                                                        <i class="material-icons btn-xs">clear_all</i> Limpiar filtros
+                                                    </a>
+                                                    
+                                                    {% if url_export %}
+                                                    <div class="btn-group export-dropdown d-inline-block">
+                                                        <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                            <i class="material-icons btn-xs">download</i> Exportar
+                                                        </button>
+                                                        <ul class="dropdown-menu">
+                                                            <li><a class="dropdown-item" href="{% url url_export %}?format=csv"><i class="material-icons btn-xs">description</i> CSV</a></li>
+                                                            <li><a class="dropdown-item" href="{% url url_export %}?format=excel"><i class="material-icons btn-xs">table_chart</i> Excel</a></li>
+                                                            <li><a class="dropdown-item" href="{% url url_export %}?format=pdf"><i class="material-icons btn-xs">picture_as_pdf</i> PDF</a></li>
+                                                        </ul>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="profile-container">
+                                                <div class="table-responsive">
+                                                    <table class="table table-striped" style="width:100%" id="data">
+                                                        <thead>
+                                                            <tr>
+                                                                <th></th>
+                                                                {% for header in headers %}
+                                                                <th>{{ header }}</th>
+                                                                {% endfor %}
+                                                                {% if use_toggle %}
+                                                                <th>ACTIVO</th>
+                                                                {% endif %}
+                                                                <th>ACCIONES</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for obj in object_list %}
+                                                            <tr>
+                                                                <td></td>
+                                                                {% for field in fields %}
+                                                                <td>{{ obj|getattr_filter:field }}</td>
+                                                                {% endfor %}
+                                                                {% if use_toggle %}
+                                                                <td>
+                                                                    <div class="form-check form-switch">
+                                                                        <input class="form-check-input switch-estado" type="checkbox" 
+                                                                            data-id="{{ obj.pk }}"
+                                                                            data-app="{{ toggle_app_name }}"
+                                                                            data-model="{{ toggle_model_name }}"
+                                                                            {% if obj.is_active %} checked {% endif %}>
+                                                                    </div>
+                                                                </td>
+                                                                {% endif %}
+                                                                <td>
+                                                                    {% for action in actions %}
+                                                                    <button class="btn btn-{{ action.color }} btn-xs Btn{{ action.name }}" data-id="{{ obj.pk }}" type="button">
+                                                                        <i class="material-icons btn-xs" style="color: {{ action.color2 }};">{{ action.icon }}</i> {{ action.label }}
+                                                                    </button>
+                                                                    {% endfor %}
+                                                                </td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                    
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block javascripts %}
+<script>
+    $(document).ready(function() {
+        var table = new DataTable('#data', {
+            responsive: true,
+            language: {
+                url: 'http://cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish_Mexico.json'
+            }
+        });
+        
+        // Asegurarse de que los dropdowns funcionen correctamente
+        var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'))
+        var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
+            return new bootstrap.Dropdown(dropdownToggleEl)
+        });
+    });
+</script>
+{% if url_export %}
+<script>
+    // Manejo de exportación
+    document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar manualmente el dropdown de exportación
+    document.querySelectorAll('.export-dropdown .dropdown-toggle').forEach(function(dropdownToggle) {
+        dropdownToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const dropdownMenu = this.nextElementSibling;
+            dropdownMenu.classList.toggle('show');
+            dropdownMenu.setAttribute('aria-expanded', dropdownMenu.classList.contains('show'));
+            
+            // Posicionar el menú correctamente
+            const rect = this.getBoundingClientRect();
+            dropdownMenu.style.top = (rect.bottom + window.scrollY) + 'px';
+            dropdownMenu.style.left = (rect.left + window.scrollX) + 'px';
+        });
+    });
+    
+    // Cerrar dropdown cuando se hace clic fuera de él
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.export-dropdown')) {
+            document.querySelectorAll('.export-dropdown .dropdown-menu').forEach(function(menu) {
+                menu.classList.remove('show');
+            });
+        }
+    });
+});
+</script>
+{% endif %}
+{% if use_toggle %}
+<!-- switch de estado -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        console.log('Inicializando manejo de switches de estado');
+        const switches = document.querySelectorAll('.switch-estado');
+        console.log('Switches encontrados:', switches.length);
+        
+        if (switches.length === 0) {
+            return;
+        }
+        
+        // Función para obtener el token CSRF
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Obtener token CSRF
+        const csrftoken = getCookie('csrftoken');
+        console.log('CSRF Token obtenido:', csrftoken ? 'Sí' : 'No');
+        
+        switches.forEach((switchElem) => {
+            switchElem.addEventListener('change', function () {
+                console.log('Switch cambiado');
+                const objId = this.getAttribute('data-id');
+                const appName = this.getAttribute('data-app');
+                const modelName = this.getAttribute('data-model');
+                
+                console.log('Datos del toggle:', {
+                    id: objId,
+                    app: appName,
+                    model: modelName,
+                    checked: this.checked
+                });
+                
+                if (!objId || !appName || !modelName) {
+                    console.error('Falta información para el toggle:', {id: objId, app: appName, model: modelName});
+                    return;
+                }
+                
+                // Usar la URL con nombre
+                let url = "/toggle-status/" + appName + "/" + modelName + "/" + objId + "/";
+                
+                console.log('URL para el toggle:', url);
+                
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        estado: this.checked
+                    })
+                })
+                .then(response => {
+                    console.log('Respuesta del servidor:', response);
+                    if (!response.ok) {
+                        throw new Error('Respuesta del servidor no fue OK');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Datos recibidos:', data);
+                    if (!data.success) {
+                        // Mostrar mensaje de error
+                        Swal.fire({
+                            title: 'Error',
+                            text: data.message,
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                        // Revertir el estado del switch
+                        this.checked = !this.checked;
+                    } else {
+                        // Mostrar mensaje de éxito
+                        Swal.fire({
+                            title: 'Éxito',
+                            text: data.message,
+                            icon: 'success',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                        location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error en fetch:', error);
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'Hubo un error en la solicitud: ' + error.message,
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                    // Revertir si hay fallo en la solicitud
+                    this.checked = !this.checked;
+                });
+            });
+        });
+    });
+</script>
+{% endif %}
+<!-- botones -->
+<script>
+$(document).ready(function() {
+    {% for add in Btn_Add %}
+    $('.Btn{{ add.name }}').click(function() {        
+        var url = "{% url add.url %}";
+        var btn = $(this)[0];
+        {% if add.modal %}
+            loadModalAndHandleForm(btn, url);
+        {% else %}
+            location.href = url;
+        {% endif %}
+    });
+    {% endfor %}
+        
+    {% for action in actions %}
+    $('.Btn{{ action.name }}').click(function () {
+        var btn = $(this)[0];
+        {% if action.no_requires_id|default:False %}
+            var url = "{% url action.url %}";
+        {% else %}
+            var id = $(this).attr('data-id');
+            var url = "{% url action.url 0 %}".replace('0', id);
+        {% endif %}
+        
+        {% if action.modal %}
+            loadModalAndHandleForm(btn, url);
+        {% else %}
+            location.href = url;
+        {% endif %}
+    });
+    {% endfor %}
+});   
+</script>
+
+<!-- Manejo de búsqueda avanzada -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Preservar parámetros de filtros en exportaciones
+    document.querySelectorAll('.export-dropdown .dropdown-item').forEach(function(exportLink) {
+        exportLink.addEventListener('click', function(e) {
+            // Obtener todos los parámetros actuales de búsqueda
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentHref = this.getAttribute('href');
+            const exportUrl = new URL(currentHref, window.location.origin);
+            
+            // Transferir parámetros de búsqueda a la URL de exportación
+            const paramsToTransfer = ['search', 'exclude_search', 'missing', 'without_purchases', 'inactive'];
+            paramsToTransfer.forEach(param => {
+                if (urlParams.has(param)) {
+                    exportUrl.searchParams.append(param, urlParams.get(param));
+                }
+            });
+            
+            // Actualizar href con los nuevos parámetros
+            this.setAttribute('href', exportUrl.toString().replace(window.location.origin, ''));
+        });
+    });
+    
+    // Mejorar manejo de filtros especiales
+    document.querySelectorAll('.btn-group .dropdown-item').forEach(function(filterLink) {
+        filterLink.addEventListener('click', function(e) {
+            // Preservar parámetro de búsqueda al aplicar filtros especiales
+            if (document.getElementById('search').value) {
+                e.preventDefault();
+                const searchTerm = document.getElementById('search').value;
+                const currentHref = this.getAttribute('href');
+                const newUrl = currentHref + (currentHref.includes('?') ? '&' : '?') + 'search=' + encodeURIComponent(searchTerm);
+                window.location.href = newUrl;
+            }
+        });
+    });
+});
+</script>
+{% endblock javascripts %}

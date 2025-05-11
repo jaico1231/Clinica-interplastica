@@ -1,0 +1,350 @@
+body {
+    background-color: #f8f9fa; /* Light grey background */
+}
+
+.container {
+    max-width: 800px; /* Limit width for better readability */
+}
+
+.card {
+    margin-bottom: 1.5rem; /* Space between question cards */
+    border: 1px solid #dee2e6;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); /* Subtle shadow */
+}
+
+.card-header {
+    background-color: #e9ecef; /* Light header background */
+    font-weight: bold;
+    padding: 0.75rem 1.25rem;
+}
+
+.card-body {
+    padding: 1.25rem;
+}
+
+.question-card {
+    margin-bottom: 1rem;
+}
+
+.question-title {
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.question-required {
+    color: #dc3545; /* Red color for required indicator */
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin-left: 5px;
+    vertical-align: super;
+}
+
+.form-check-label {
+    margin-left: 0.25rem;
+}
+
+#pagination-controls span {
+    font-weight: bold;
+}
+
+/* Style adjustments based on the image */
+label.form-label.me-2.mb-0 {
+    white-space: nowrap; /* Prevent label from wrapping */
+}
+
+.card-body.d-flex.align-items-center > label {
+    margin-right: 0.5rem !important;
+}
+.card-body.d-flex.align-items-center > select {
+     margin-right: 0.5rem !important;
+}
+
+h1 {
+    margin-bottom: 0.1rem;
+}
+
+h1 + p {
+    color: #6c757d; /* Grey color for the date text */
+    margin-bottom: 1.5rem;
+}
+
+/* Progress Bar Styling */
+#progress-section .progress {
+    height: 20px; /* Make progress bar a bit thicker */
+}
+
+#progress-text {
+    font-weight: 500;
+}
+
+/* Hierarchy Questions Styling */
+.hierarchy-container {
+    margin-top: 1rem;
+}
+
+.hierarchy-row {
+    overflow-x: auto;
+    padding-bottom: 10px;
+}
+
+.hierarchy-level {
+    min-width: 200px;
+    padding: 0 10px;
+}
+
+.hierarchy-level-title {
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px 4px 0 0;
+    margin: 0;
+    font-weight: 600;
+    text-align: center;
+}
+
+.hierarchy-items {
+    min-height: 100px;
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    padding: 8px;
+    background-color: #fff;
+}
+
+.hierarchy-item {
+    cursor: move;
+    margin-bottom: 8px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    user-select: none;
+}
+
+.hierarchy-item.active {
+    background-color: #e2f0ff;
+    border-color: #7db2fa;
+    font-weight: 500;
+}
+
+.hierarchy-item:hover {
+    background-color: #e9ecef;
+}
+
+.hierarchy-item.active:hover {
+    background-color: #d1e7ff;
+}
+
+/* Sortable ghost class */
+.sortable-ghost {
+    opacity: 0.5;
+    background-color: #ccc;
+}
+
+/* CSS for sortable list items and hierarchy questions */
+
+/* General sortable styles */
+.sortable {
+    position: relative;
+}
+
+.sortable tr {
+    cursor: move;
+}
+
+.sortable-ghost {
+    background-color: #f8f9fa;
+    opacity: 0.5;
+}
+
+.handle {
+    cursor: move;
+}
+
+/* Hierarchy specific styles */
+.hierarchy-tree {
+    margin-bottom: 20px;
+}
+
+.hierarchy-level {
+    list-style: none;
+    padding-left: 0;
+    margin-bottom: 0;
+}
+
+.hierarchy-level .hierarchy-level {
+    padding-left: 2rem;
+    border-left: 1px dashed #dee2e6;
+    margin-top: 10px;
+    margin-left: 10px;
+}
+
+.hierarchy-item {
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    transition: all 0.2s ease;
+}
+
+.hierarchy-item:hover {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.hierarchy-item-content {
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+}
+
+.item-handle {
+    margin-right: 15px;
+    color: #6c757d;
+    cursor: move;
+}
+
+.item-text {
+    flex-grow: 1;
+}
+
+.item-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.hierarchy-item-ghost {
+    background-color: #f8f9fa;
+    border: 1px dashed #0d6efd;
+    opacity: 0.7;
+}
+
+/* Hierarchy viewer styles */
+.hierarchy-container {
+    margin-bottom: 20px;
+}
+
+.hierarchy-items {
+    list-style: none;
+    padding-left: 0;
+}
+
+.hierarchy-child-items {
+    margin-top: 10px;
+    padding-left: 25px;
+    border-left: 2px solid #e9ecef;
+    display: none;
+}
+
+.hierarchy-child-items.show {
+    display: block;
+}
+
+/* Preview styles for hierarchy questions */
+.hierarchy-preview {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 4px;
+    margin-top: 20px;
+}
+
+.hierarchy-preview-list {
+    list-style: none;
+    padding-left: 0;
+}
+
+.hierarchy-preview-item {
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+}
+
+.preview-item-handle {
+    margin-right: 15px;
+    color: #6c757d;
+    cursor: move;
+}
+
+.preview-item-text {
+    flex-grow: 1;
+}
+
+.hierarchy-preview-item-ghost {
+    background-color: #e9ecef;
+    border: 1px dashed #0d6efd;
+}
+
+/* Response form hierarchy styles */
+.response-hierarchy-container {
+    margin-bottom: 15px;
+}
+
+.response-hierarchy-items {
+    list-style: none;
+    padding: 10px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    background-color: #fff;
+    min-height: 100px;
+}
+
+.response-hierarchy-item {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    cursor: move;
+}
+
+.response-hierarchy-item:hover {
+    background-color: #e9ecef;
+}
+
+.response-item-handle {
+    margin-right: 10px;
+    color: #6c757d;
+}
+
+.response-item-text {
+    flex-grow: 1;
+}
+
+.response-hierarchy-instructions {
+    margin-bottom: 10px;
+    font-style: italic;
+    color: #6c757d;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .hierarchy-item-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .item-handle {
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+    
+    .item-actions {
+        margin-top: 10px;
+        width: 100%;
+        justify-content: flex-end;
+    }
+    
+    .hierarchy-level .hierarchy-level {
+        padding-left: 1rem;
+    }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .hierarchy-level {
+        min-width: 160px;
+    }
+}

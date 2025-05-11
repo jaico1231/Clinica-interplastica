@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Confirm Deletion</h1>
+
+<p>Are you sure you want to delete the configuration: <strong>{{ object }}</strong>?</p>
+
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Yes, Delete</button>
+    <a href="{{ object.get_absolute_url }}" class="btn btn-secondary">Cancel</a> {# O redirige a la lista #}
+    {# Nota: get_absolute_url necesita definirse en el modelo o cambiar el enlace Cancel #}
+    {# Alternativa para Cancel: <a href="{{ view.success_url }}" class="btn btn-secondary">Cancel</a> #}
+</form>
+{% endblock %}

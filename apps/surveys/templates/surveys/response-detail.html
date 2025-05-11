@@ -1,0 +1,176 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Encabezado -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3>{{ title }}</h3>
+            <div class="btn-group">
+                <a href="{{ return_url }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> {% trans 'Volver a Respuestas' %}
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Información del encuestado -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h5>{% trans 'Información del Encuestado' %}</h5>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>{% trans 'Nombre' %}</th>
+                            <td>{{ respondent_info.nombre|default:'Anónimo' }}</td>
+                        </tr>
+                        <tr>
+                            <th>{% trans 'Email' %}</th>
+                            <td>{{ respondent_info.email|default:'-' }}</td>
+                        </tr>
+                        <tr>
+                            <th>{% trans 'IP' %}</th>
+                            <td>{{ respondent_info.ip|default:'-' }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h5>{% trans 'Información de la Respuesta' %}</h5>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>{% trans 'Encuesta' %}</th>
+                            <td>{{ survey.title }}</td>
+                        </tr>
+                        <tr>
+                            <th>{% trans 'Fecha Inicio' %}</th>
+                            <td>{{ respondent_info.fecha_inicio|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <th>{% trans 'Fecha Completado' %}</th>
+                            <td>
+                                {% if respondent_info.fecha_completado %}
+                                    {{ respondent_info.fecha_completado|date:"d/m/Y H:i" }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>{% trans 'Estado' %}</th>
+                            <td>
+                                <span class="badge {% if response.is_complete %}bg-success{% else %}bg-warning{% endif %}">
+                                    {{ respondent_info.estado }}
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Respuestas a las preguntas -->
+            <h5>{% trans 'Respuestas' %}</h5>
+            
+            {% if answers %}
+            <div class="accordion" id="answersAccordion">
+                {% for answer in answers %}
+                <div class="accordion-item mb-2">
+                    <h2 class="accordion-header" id="heading{{ answer.id }}">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ answer.id }}" aria-expanded="true" aria-controls="collapse{{ answer.id }}">
+                            {{ answer.question.order }}. {{ answer.question.text }}
+                        </button>
+                    </h2>
+                    <div id="collapse{{ answer.id }}" class="accordion-collapse collapse show" aria-labelledby="heading{{ answer.id }}" data-bs-parent="#answersAccordion">
+                        <div class="accordion-body">
+                            <!-- Mostrar la respuesta según el tipo de pregunta -->
+                            {% with question_type=answer.question.question_type.name %}
+                            
+                            {% if question_type == 'TEXT' or question_type == 'TEXT_AREA' %}
+                            <div class="answer-text border p-3 bg-light">
+                                {% if answer.text_answer %}
+                                    {{ answer.text_answer|linebreaksbr }}
+                                {% else %}
+                                    <span class="text-muted">{% trans 'Sin respuesta' %}</span>
+                                {% endif %}
+                            </div>
+                            
+                            {% elif question_type == 'SINGLE_CHOICE' or question_type == 'MULTIPLE_CHOICE' %}
+                            <div class="answer-choices">
+                                {% if answer.selected_choices.all %}
+                                    <ul class="list-group">
+                                        {% for selected in answer.selected_choices.all %}
+                                        <li class="list-group-item">
+                                            {{ selected.choice.text }}
+                                            <span class="badge bg-secondary">{{ selected.choice.value }}</span>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <span class="text-muted">{% trans 'Sin selección' %}</span>
+                                {% endif %}
+                            </div>
+                            
+                            {% elif question_type == 'RATING' %}
+                            <div class="answer-rating">
+                                {% if answer.number_answer %}
+                                    <div class="d-flex align-items-center">
+                                        <div class="rating-display">
+                                            <span class="badge bg-primary p-2">{{ answer.number_answer }}</span>
+                                        </div>
+                                        {% if answer.selected_choices.first %}
+                                            <span class="ms-2">{{ answer.selected_choices.first.choice.text }}</span>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">{% trans 'Sin valoración' %}</span>
+                                {% endif %}
+                            </div>
+                            
+                            {% elif question_type == 'DATE' %}
+                            <div class="answer-date">
+                                {% if answer.date_answer %}
+                                    <span class="badge bg-info">{{ answer.date_answer|date:"d/m/Y" }}</span>
+                                {% else %}
+                                    <span class="text-muted">{% trans 'Sin fecha' %}</span>
+                                {% endif %}
+                            </div>
+                            
+                            {% elif question_type == 'NUMBER' %}
+                            <div class="answer-number">
+                                {% if answer.number_answer %}
+                                    <span class="badge bg-info">{{ answer.number_answer }}</span>
+                                {% else %}
+                                    <span class="text-muted">{% trans 'Sin valor numérico' %}</span>
+                                {% endif %}
+                            </div>
+                            
+                            {% elif question_type == 'YES_NO' %}
+                            <div class="answer-yesno">
+                                {% if answer.boolean_answer is not None %}
+                                    {% if answer.boolean_answer %}
+                                        <span class="badge bg-success">{% trans 'Sí' %}</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">{% trans 'No' %}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">{% trans 'Sin respuesta' %}</span>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            
+                            {% endwith %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> {% trans 'No hay respuestas a las preguntas' %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

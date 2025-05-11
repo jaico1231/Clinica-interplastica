@@ -1,0 +1,338 @@
+<!-- Modal principal para formularios y contenido dinámico -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editModalLabel"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Contenido del modal se cargará dinámicamente -->
+                <div class="placeholder">
+                    <p class="text-muted text-center">El contenido se cargará aquí</p>
+                </div>
+            </div>
+            <!-- Pie de modal opcional, se muestra solo si se necesita -->
+            <div class="modal-footer d-none">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary action-btn">probando</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de carga para mostrar durante operaciones asíncronas -->
+<div class="modal fade" id="loadingModal" tabindex="-1" aria-labelledby="loadingModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+                <h5 class="mt-3">Procesando...</h5>
+                <p class="text-muted">Por favor, espere mientras se procesan los datos.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script para inicializar los modales -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Configurar el modal de confirmación
+        window.showConfirmModal = function(message, callback) {
+            var confirmModal = document.getElementById('confirmModal');
+            var confirmMessage = document.getElementById('confirmMessage');
+            var confirmBtn = document.getElementById('confirmActionBtn');
+            
+            // Establecer mensaje
+            confirmMessage.textContent = message;
+            
+            // Configurar callback del botón de confirmación
+            confirmBtn.onclick = function() {
+                // Cerrar el modal
+                var modalInstance = bootstrap.Modal.getInstance(confirmModal);
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+                
+                // Limpiar backdops
+                setTimeout(function() {
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open').css({
+                        'overflow': '',
+                        'padding-right': ''
+                    });
+                }, 300);
+                
+                // Ejecutar el callback
+                if (typeof callback === 'function') {
+                    callback();
+                }
+            };
+            
+            // Mostrar el modal
+            var modalInstance = new bootstrap.Modal(confirmModal);
+            modalInstance.show();
+        };
+        
+        // Función para mostrar modal de carga
+        window.showLoadingModal = function() {
+            var loadingModal = document.getElementById('loadingModal');
+            var modalInstance = new bootstrap.Modal(loadingModal);
+            modalInstance.show();
+            return modalInstance;
+        };
+        
+        // Función para ocultar modal de carga
+        window.hideLoadingModal = function() {
+            var loadingModal = document.getElementById('loadingModal');
+            var modalInstance = bootstrap.Modal.getInstance(loadingModal);
+            if (modalInstance) {
+                modalInstance.hide();
+            }
+            
+            // Limpiar backdrop
+            setTimeout(function() {
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open').css({
+                    'overflow': '',
+                    'padding-right': ''
+                });
+            }, 300);
+        };
+        
+        // Función para mostrar modal con contenido personalizado
+        window.showCustomModal = function(title, content, size, showFooter) {
+            var editModal = document.getElementById('editModal');
+            var modalTitle = editModal.querySelector('.modal-title');
+            var modalBody = editModal.querySelector('.modal-body');
+            var modalFooter = editModal.querySelector('.modal-footer');
+            var modalDialog = editModal.querySelector('.modal-dialog');
+            
+            // Establecer título y contenido
+            if (modalTitle) modalTitle.textContent = title || 'Formulario';
+            if (modalBody) modalBody.innerHTML = content || '';
+            
+            // Ajustar tamaño del modal
+            if (modalDialog) {
+                modalDialog.className = 'modal-dialog';
+                if (size === 'sm') {
+                    modalDialog.classList.add('modal-sm');
+                } else if (size === 'lg') {
+                    modalDialog.classList.add('modal-lg');
+                } else if (size === 'xl') {
+                    modalDialog.classList.add('modal-xl');
+                } else if (size === 'fullscreen') {
+                    modalDialog.classList.add('modal-fullscreen');
+                }
+            }
+            
+            // Mostrar u ocultar pie de modal
+            if (modalFooter) {
+                if (showFooter) {
+                    modalFooter.classList.remove('d-none');
+                } else {
+                    modalFooter.classList.add('d-none');
+                }
+            }
+            
+            // Mostrar el modal
+            var modalInstance = new bootstrap.Modal(editModal);
+            modalInstance.show();
+            
+            // Retornar instancia para operaciones adicionales
+            return {
+                instance: modalInstance,
+                modal: editModal,
+                setContent: function(newContent) {
+                    if (modalBody) modalBody.innerHTML = newContent;
+                },
+                setTitle: function(newTitle) {
+                    if (modalTitle) modalTitle.textContent = newTitle;
+                },
+                hide: function() {
+                    modalInstance.hide();
+                }
+            };
+        };
+    });
+</script>
+
+<!-- Script para manejar la función loadModalAndHandleForm -->
+<script>
+    // Esta función debe estar disponible globalmente
+    function loadModalAndHandleForm(btn, url) {
+        // Mostrar el modal de carga
+        var loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+        loadingModal.show();
+
+        // Realizar la petición AJAX para obtener el contenido
+        $.ajax({
+            url: url,
+            type: 'GET',
+            success: function(data) {
+                // Ocultar el modal de carga
+                loadingModal.hide();
+                
+                // Limpiar cualquier backdrop que pueda haber quedado
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open').css({
+                    'overflow': '',
+                    'padding-right': ''
+                });
+                
+                // Obtener el título del botón si está disponible
+                var titulo = $(btn).data('title') || $(btn).attr('title') || 'Formulario';
+                
+                // Preparar el modal principal
+                var editModal = document.getElementById('editModal');
+                var modalTitle = editModal.querySelector('.modal-title');
+                var modalBody = editModal.querySelector('.modal-body');
+                
+                // Establecer título y contenido
+                if (modalTitle) modalTitle.textContent = titulo;
+                if (modalBody) modalBody.innerHTML = data;
+                
+                // Mostrar el modal
+                var editModalInstance = new bootstrap.Modal(editModal);
+                editModalInstance.show();
+                
+                // Inicializar elementos de formulario dentro del modal
+                initializeModalFormElements(editModal);
+                
+                // Manejar envío del formulario
+                $(editModal).find('form').off('submit').on('submit', function(e) {
+                    e.preventDefault();
+                    
+                    var form = $(this);
+                    var formData = new FormData(this);
+                    
+                    // Añadir token CSRF si no está presente
+                    if (!formData.has('csrfmiddlewaretoken')) {
+                        var csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
+                        if (csrfToken) {
+                            formData.append('csrfmiddlewaretoken', csrfToken);
+                        }
+                    }
+                    
+                    $.ajax({
+                        url: form.attr('action'),
+                        type: form.attr('method'),
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        beforeSend: function() {
+                            // Mostrar indicador de carga
+                            form.find('[type="submit"]').prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Procesando...');
+                            
+                            // Limpiar mensajes de error previos
+                            form.find('.is-invalid').removeClass('is-invalid');
+                            form.find('.invalid-feedback').remove();
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                // Cerrar el modal
+                                editModalInstance.hide();
+                                
+                                // Limpiar backdrops
+                                setTimeout(function() {
+                                    $('.modal-backdrop').remove();
+                                    $('body').removeClass('modal-open').css({
+                                        'overflow': '',
+                                        'padding-right': ''
+                                    });
+                                }, 300);
+                                
+                                // Mostrar mensaje de éxito
+                                if (typeof toastr !== 'undefined') {
+                                    toastr.success(response.message || 'Operación exitosa');
+                                } else {
+                                    alert(response.message || 'Operación exitosa');
+                                }
+                                
+                                // Recargar la página o redirigir
+                                if (response.redirect) {
+                                    setTimeout(function() {
+                                        window.location.href = response.redirect;
+                                    }, 1000);
+                                } else {
+                                    setTimeout(function() {
+                                        location.reload();
+                                    }, 1000);
+                                }
+                            }
+                        },
+                        error: function(xhr) {
+                            // Habilitar nuevamente el botón
+                            form.find('[type="submit"]').prop('disabled', false).html('Guardar');
+                            
+                            if (xhr.status === 400) {
+                                // Manejar errores de validación
+                                var response = xhr.responseJSON;
+                                
+                                if (response && response.errors) {
+                                    // Mostrar errores en los campos
+                                    $.each(response.errors, function(field, errors) {
+                                        var input = form.find('[name="' + field + '"]');
+                                        var errorMessage = Array.isArray(errors) ? errors[0] : errors;
+                                        
+                                        // Añadir clase de error
+                                        input.addClass('is-invalid');
+                                        
+                                        // Añadir mensaje de error
+                                        var feedbackElement = $('<div class="invalid-feedback">' + errorMessage + '</div>');
+                                        input.after(feedbackElement);
+                                    });
+                                    
+                                    // Mostrar el primer error en un toast o alerta
+                                    var firstError = Object.values(response.errors)[0];
+                                    if (Array.isArray(firstError)) firstError = firstError[0];
+                                    
+                                    if (typeof toastr !== 'undefined') {
+                                        toastr.error(firstError);
+                                    } else {
+                                        alert(firstError);
+                                    }
+                                } else if (response && response.message) {
+                                    // Mostrar mensaje de error general
+                                    if (typeof toastr !== 'undefined') {
+                                        toastr.error(response.message);
+                                    } else {
+                                        alert(response.message);
+                                    }
+                                } else {
+                                    if (typeof toastr !== 'undefined') {
+                                        toastr.error('Ha ocurrido un error al procesar el formulario');
+                                    } else {
+                                        alert('Ha ocurrido un error al procesar el formulario');
+                                    }
+                                }
+                            } else {
+                                // Error de servidor u otro problema
+                                if (typeof toastr !== 'undefined') {
+                                    toastr.error('Error en el servidor. Por favor, inténtelo más tarde');
+                                } else {
+                                    alert('Error en el servidor. Por favor, inténtelo más tarde');
+                                }
+                            }
+                        }
+                    });
+                });
+            },
+            error: function(xhr, status, error) {
+                // Ocultar modal de carga
+                loadingModal.hide();
+                
+                // Mostrar mensaje de error
+                if (typeof toastr !== 'undefined') {
+                    toastr.error('Error al cargar el contenido: ' + error);
+                } else {
+                    alert('Error al cargar el contenido: ' + error);
+                }
+                
+                console.error("Error al cargar el modal:", error);
+            }
+        });
+    }
+</script>

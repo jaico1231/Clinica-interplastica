@@ -1,0 +1,143 @@
+{# Template base para vista detalle - accounting/base_detail.html #}
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h4>{{ object }}</h4>
+        <div>
+            {% if update_perm %}
+            <a href="{{ update_url }}" class="btn btn-light">
+                <i class="fas fa-edit"></i> {% trans 'Editar' %}
+            </a>
+            {% endif %}
+            <a href="{{ list_url }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> {% trans 'Volver' %}
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        {% block detail_content %}{% endblock %}
+    </div>
+</div>
+{% endblock %}
+
+{# Template para detalle de Naturaleza - accounting/naturaleza/naturaleza_detail.html #}
+{% extends 'accounting/base_detail.html' %}
+{% load i18n %}
+
+{% block detail_content %}
+<div class="row">
+    <div class="col-md-6">
+        <table class="table">
+            <tr>
+                <th>{% trans 'Código' %}:</th>
+                <td>{{ naturaleza.code }}</td>
+            </tr>
+            <tr>
+                <th>{% trans 'Nombre' %}:</th>
+                <td>{{ naturaleza.name }}</td>
+            </tr>
+            <tr>
+                <th>{% trans 'Descripción' %}:</th>
+                <td>{{ naturaleza.description|default:'-' }}</td>
+            </tr>
+        </table>
+    </div>
+    <div class="col-md-6">
+        <h5>{% trans 'Grupos de Cuenta relacionados' %}</h5>
+        {% if naturaleza.grupos_cuenta.exists %}
+        <ul class="list-group">
+            {% for grupo in naturaleza.grupos_cuenta.all %}
+            <li class="list-group-item">
+                <a href="{% url 'grupocuenta_detail' grupo.pk %}">
+                    {{ grupo.code }} - {{ grupo.name }}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted">{% trans 'No hay grupos de cuenta relacionados' %}</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{# Template para detalle de GrupoCuenta - accounting/grupocuenta/grupocuenta_detail.html #}
+{% extends 'accounting/base_detail.html' %}
+{% load i18n %}
+
+{% block detail_content %}
+<div class="row">
+    <div class="col-md-6">
+        <table class="table">
+            <tr>
+                <th>{% trans 'Código' %}:</th>
+                <td>{{ grupocuenta.code }}</td>
+            </tr>
+            <tr>
+                <th>{% trans 'Nombre' %}:</th>
+                <td>{{ grupocuenta.name }}</td>
+            </tr>
+            <tr>
+                <th>{% trans 'Nivel' %}:</th>
+                <td>{{ grupocuenta.level }}</td>
+            </tr>
+            <tr>
+                <th>{% trans 'Naturaleza' %}:</th>
+                <td>
+                    <a href="{% url 'naturaleza_detail' grupocuenta.naturaleza.pk %}">
+                        {{ grupocuenta.naturaleza }}
+                    </a>
+                </td>
+            </tr>
+            <tr>
+                <th>{% trans 'Descripción' %}:</th>
+                <td>{{ grupocuenta.description|default:'-' }}</td>
+            </tr>
+        </table>
+    </div>
+    <div class="col-md-6">
+        <h5>{% trans 'Cuentas Mayor relacionadas' %}</h5>
+        {% if cuentas_mayor %}
+        <ul class="list-group">
+            {% for cuenta in cuentas_mayor %}
+            <li class="list-group-item">
+                <a href="{% url 'cuentamayor_detail' cuenta.pk %}">
+                    {{ cuenta.code }} - {{ cuenta.name }}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted">{% trans 'No hay cuentas mayor relacionadas' %}</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{# Template para detalle de CuentaMayor - accounting/cuentamayor/cuentamayor_detail.html #}
+{% extends 'accounting/base_detail.html' %}
+{% load i18n %}
+
+{% block detail_content %}
+<div class="row">
+    <div class="col-md-6">
+        <table class="table">
+            <tr>
+                <th>{% trans 'Código' %}:</th>
+                <td>{{ cuentamayor.code }}</td>
+            </tr>
+            <tr>
+                <th>{% trans 'Nombre' %}:</th>
+                <td>{{ cuentamayor.name }}</td>
+            </tr>
+            <tr>
+                <th>{% trans 'Nivel' %}:</th>
+                <td>{{ cuentamayor.level }}</td>
+            </tr>
+            <tr>
+                <th>{% trans 'Grupo' %}:</th>
+                <td>
+                    

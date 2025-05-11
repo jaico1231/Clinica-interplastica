@@ -1,0 +1,184 @@
+<div class="json-data">
+                                                                {% for key, value in item.data_before.items %}
+                                                                <span class="json-field">
+                                                                    <strong>{{ key }}:</strong> {{ value }}
+                                                                </span>
+                                                                {% endfor %}
+                                                            </div>
+                                                        </div>
+                                                        {% endif %}
+                                                        
+                                                        {% if item.data_after %}
+                                                        <div class="col-md-{% if item.data_before %}6{% else %}12{% endif %}">
+                                                            <h6>Datos nuevos</h6>
+                                                            <div class="json-data">
+                                                                {% for key, value in item.data_after.items %}
+                                                                <span class="json-field">
+                                                                    <strong>{{ key }}:</strong> {{ value }}
+                                                                </span>
+                                                                {% endfor %}
+                                                            </div>
+                                                        </div>
+                                                        {% endif %}
+                                                        
+                                                        {% if item.data_before and item.data_after %}
+                                                        <div class="col-md-12 mt-3">
+                                                            <h6>Cambios</h6>
+                                                            <div class="json-data">
+                                                                {% for key, value in item.data_after.items %}
+                                                                    {% if key in item.data_before %}
+                                                                        {% if value != item.data_before|get_item:key %}
+                                                                        <span class="json-field diff-changed">
+                                                                            <strong>{{ key }}:</strong> {{ item.data_before|get_item:key }} → {{ value }}
+                                                                        </span>
+                                                                        {% endif %}
+                                                                    {% else %}
+                                                                        <span class="json-field diff-added">
+                                                                            <strong>{{ key }}:</strong> {{ value }} (añadido)
+                                                                        </span>
+                                                                    {% endif %}
+                                                                {% endfor %}
+                                                                
+                                                                {% for key, value in item.data_before.items %}
+                                                                    {% if key not in item.data_after %}
+                                                                    <span class="json-field diff-removed">
+                                                                        <strong>{{ key }}:</strong> {{ value }} (eliminado)
+                                                                    </span>
+                                                                    {% endif %}
+                                                                {% endfor %}
+                                                            </div>
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <em>Sin datos</em>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center py-4">
+                                    <p class="text-muted">No se encontraron registros de auditoría que coincidan con los criterios.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Paginación -->
+                {% if is_paginated %}
+                <nav aria-label="Paginación" class="mt-4">
+                    <ul class="pagination">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% for key, value in current_filters.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Primera">
+                                <span aria-hidden="true">&laquo;&laquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in current_filters.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Anterior">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for num in paginator.page_range %}
+                            {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% for key, value in current_filters.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in current_filters.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Siguiente">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ paginator.num_pages }}{% for key, value in current_filters.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Última">
+                                <span aria-hidden="true">&raquo;&raquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar DataTable
+        var table = new DataTable('.audit-table', {
+            responsive: true,
+            columnDefs: [
+                { type: 'date', targets: 0 }
+            ],
+            language: {
+                url: 'http://cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish_Mexico.json'
+            },
+            paging: false,  // Desactivamos la paginación de DataTables porque usamos la de Django
+            info: false     // Desactivamos la información de DataTables
+        });
+        
+        // Mejoras en los filtros de fecha
+        var dateStart = document.getElementById('date_start');
+        var dateEnd = document.getElementById('date_end');
+        var periodSelect = document.getElementById('period');
+        
+        dateStart.addEventListener('change', function() {
+            if (dateStart.value) {
+                dateEnd.setAttribute('min', dateStart.value);
+            } else {
+                dateEnd.removeAttribute('min');
+            }
+        });
+        
+        dateEnd.addEventListener('change', function() {
+            if (dateEnd.value) {
+                dateStart.setAttribute('max', dateEnd.value);
+            } else {
+                dateStart.removeAttribute('max');
+            }
+        });
+        
+        // Al seleccionar un período predefinido, deshabilitar fechas personalizadas
+        periodSelect.addEventListener('change', function() {
+            var isPeriodSelected = periodSelect.value !== '';
+            dateStart.disabled = isPeriodSelected;
+            dateEnd.disabled = isPeriodSelected;
+            
+            if (isPeriodSelected) {
+                dateStart.value = '';
+                dateEnd.value = '';
+            }
+        });
+        
+        // Disparar el evento change para establecer restricciones iniciales
+        if (dateStart.value) {
+            dateStart.dispatchEvent(new Event('change'));
+        }
+        if (dateEnd.value) {
+            dateEnd.dispatchEvent(new Event('change'));
+        }
+    });
+</script>
+{% endblock %}

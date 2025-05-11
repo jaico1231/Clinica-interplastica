@@ -1,0 +1,682 @@
+{% extends "index.html" %}
+{% load static %}
+
+{% block title %}
+  {% if form.instance.pk %}Editar{% else %}Crear{% endif %} Configuración de Correo
+{% endblock %}
+
+{% block stylesheets %}
+{% if messages %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        {% for message in messages %}
+            {% if message.tags == 'success' %}
+                const icon = 'success';
+            {% elif message.tags == 'error' or message.tags == 'danger' %}
+                const icon = 'error';
+            {% elif message.tags == 'warning' %}
+                const icon = 'warning';
+            {% elif message.tags == 'info' %}
+                const icon = 'info';
+            {% else %}
+                const icon = 'info';
+            {% endif %}
+            
+            Swal.fire({
+                title: '{{ message.tags|title|default:"Información" }}',
+                text: '{{ message|escapejs }}',
+                icon: icon,
+                position: 'center',
+                showConfirmButton: false,
+                timer: 1500,
+                timerProgressBar: true,
+                width: '32em',
+                padding: '1.25em'
+            });
+        {% endfor %}
+    });
+</script>
+{% endif %}
+<style>
+  /* Estilos para el toggle de contraseña */
+  .input-group .password-toggle-btn {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+  
+  /* Ajuste para los iconos de material */
+  .password-toggle-btn .material-symbols-outlined {
+    font-size: 1.1em;
+    line-height: 1;
+    vertical-align: middle;
+  }
+  
+  /* Estilos adicionales para formulario */
+  .form-label {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+  }
+  
+  .form-text {
+    font-size: 0.8rem;
+    color: #6c757d;
+  }
+  
+  .form-check-label {
+    font-weight: normal;
+  }
+  
+  /* Estilos para las notificaciones */
+  .alert {
+    margin-bottom: 1rem;
+  }
+  
+  /* Estilos para la tarjeta */
+  .card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    margin-bottom: 2rem;
+  }
+  
+  .card-header {
+    background-color: #f8f9fa;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1.25rem;
+  }
+  
+  .card-title {
+    margin-bottom: 0;
+  }
+  
+  fieldset {
+    padding: 0;
+    margin: 0;
+    border: 0;
+  }
+  
+  legend.h6 {
+    font-weight: 600;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #dee2e6;
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  
+  /* Estilos adicionales para configuraciones condicionales */
+  .conditional-fields {
+    transition: all 0.3s ease;
+    overflow: hidden;
+  }
+  
+  .backend-specific {
+    display: none;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="card">
+    <div class="card-header">
+      <h4 class="card-title">{% if form.instance.pk %}Editar{% else %}Crear Nueva{% endif %} Configuración de Correo Electrónico</h4>
+      <div>
+        <a href="{% url 'notificaciones:email_config_list' %}" class="btn btn-outline-secondary">
+          <span class="material-symbols-outlined align-middle me-1" style="font-size: 1.1em;">list</span>
+          Listar Configuraciones
+        </a>
+        <a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">
+          <span class="material-symbols-outlined align-middle me-1" style="font-size: 1.1em;">arrow_back</span>
+          Volver
+        </a>
+      </div>
+    </div>
+    <div class="card-body">
+
+      <form method="post" novalidate id="email-config-form">
+        {% csrf_token %}
+
+        {# Display Non-Field Errors (errors not specific to one field) #}
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger" role="alert">
+            {% for error in form.non_field_errors %}
+              <p class="mb-0">{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {# --- Sección: Información General --- #}
+        <fieldset class="mb-4">
+          <legend class="h6">Información General</legend>
+          <div class="row">
+            <div class="col-md-6">
+              {% include "notifications/includes/_form_field.html" with field=form.name %}
+            </div>
+            <div class="col-md-6">
+              {% include "notifications/includes/_form_field.html" with field=form.backend %}
+            </div>
+            <div class="col-md-6">
+              {% include "notifications/includes/_form_field.html" with field=form.from_email %}
+            </div>
+             <div class="col-md-6 d-flex align-items-center"> {# Align checkbox vertically #}
+               {% include "notifications/includes/_form_field.html" with field=form.is_active %}
+             </div>
+          </div>
+        </fieldset>
+
+        {# --- Sección: Servidor y Autenticación --- #}
+        <fieldset class="mb-4" id="server-auth-section">
+          <legend class="h6">Servidor y Autenticación</legend>
+          <div class="row">
+            {# Campos específicos para SMTP #}
+            <div class="col-md-6 backend-specific" data-backend="SMTP">
+              {% include "notifications/includes/_form_field.html" with field=form.host %}
+            </div>
+            <div class="col-md-6 backend-specific" data-backend="SMTP">
+              {% include "notifications/includes/_form_field.html" with field=form.port %}
+            </div>
+            <div class="col-md-6 backend-specific" data-backend="SMTP">
+              {% include "notifications/includes/_form_field.html" with field=form.username %}
+            </div>
+            <div class="col-md-6 backend-specific" data-backend="SMTP">
+              {% include "notifications/includes/_form_field.html" with field=form.password %}
+            </div>
+            <div class="col-md-6 backend-specific" data-backend="SMTP">
+              {% include "notifications/includes/_form_field.html" with field=form.security_protocol %}
+            </div>
+            
+            {# Campos específicos para SendGrid #}
+            <div class="col-md-12 backend-specific" data-backend="SENDGRID">
+              {% include "notifications/includes/_form_field.html" with field=form.api_key %}
+            </div>
+            
+            {# Campos específicos para SES #}
+            <div class="col-md-6 backend-specific" data-backend="SES">
+              {% include "notifications/includes/_form_field.html" with field=form.username help_text="AWS Access Key ID" %}
+            </div>
+            <div class="col-md-6 backend-specific" data-backend="SES">
+              {% include "notifications/includes/_form_field.html" with field=form.password help_text="AWS Secret Access Key" %}
+            </div>
+            <div class="col-md-6 backend-specific" data-backend="SES">
+              {% include "notifications/includes/_form_field.html" with field=form.api_key help_text="AWS Region (e.g., us-east-1)" %}
+            </div>
+            
+            {# Campos comunes para todos los backends #}
+            <div class="col-md-6">
+              {% include "notifications/includes/_form_field.html" with field=form.timeout %}
+            </div>
+            <div class="col-md-6 d-flex align-items-center"> {# Align checkbox vertically #}
+              {% include "notifications/includes/_form_field.html" with field=form.fail_silently %}
+            </div>
+          </div>
+        </fieldset>
+
+        {# --- Sección: Cabeceras Personalizadas --- #}
+        <fieldset class="mb-4">
+           <legend class="h6">Opciones Avanzadas</legend>
+           <div class="row">
+              <div class="col-md-6 d-flex align-items-center"> {# Align checkbox vertically #}
+                 {% include "notifications/includes/_form_field.html" with field=form.use_custom_headers %}
+              </div>
+              {# Conditionally show custom_headers based on use_custom_headers #}
+              <div class="col-12 conditional-fields" id="custom-headers-container" {% if not form.instance.use_custom_headers %}style="display: none;"{% endif %}>
+                 {% include "notifications/includes/_form_field.html" with field=form.custom_headers %}
+              </div>
+           </div>
+        </fieldset>
+
+        {# --- Botones de Acción --- #}
+        <div class="d-flex justify-content-end gap-2 mt-4 border-top pt-3">
+           {# Test Button with data-test-url attribute #}
+           <button type="button" class="btn btn-outline-secondary" id="test-email-btn" 
+                  data-test-url="{% url 'notificaciones:email_config_test' %}">
+            <span class="material-symbols-outlined align-middle me-1" style="font-size: 1.1em;">forward_to_inbox</span>
+            Enviar Email de Prueba
+          </button>
+           <button type="submit" class="btn btn-primary">
+             <span class="material-symbols-outlined align-middle me-1" style="font-size: 1.1em;">save</span>
+             {% if form.instance.pk %}Actualizar{% else %}Guardar{% endif %} Configuración
+           </button>
+        </div>
+
+      </form>
+
+    </div> {# End card-body #}
+  </div> {# End card #}
+</div> {# End container #}
+
+{% endblock %}
+
+{% block javascripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Inicialización del formulario
+    initializeForm();
+    
+    // Configurar los eventos para los botones de acción
+    setupButtonActions();
+    
+    // Configurar toggle de contraseña
+    setupPasswordToggle();
+    
+    // Configurar el comportamiento basado en el backend seleccionado
+    setupBackendSpecificFields();
+  });
+
+  /**
+   * Inicializa todas las funcionalidades del formulario
+   */
+  function initializeForm() {
+    // Inicializa la funcionalidad de cabeceras personalizadas
+    setupCustomHeadersToggle();
+  }
+
+  /**
+   * Configura el comportamiento de mostrar/ocultar las cabeceras personalizadas
+   */
+  function setupCustomHeadersToggle() {
+    // Buscar el checkbox por su ID o nombre
+    const useCustomHeadersCheckbox = document.querySelector('input[name="use_custom_headers"]');
+    const customHeadersContainer = document.getElementById('custom-headers-container');
+    
+    if (useCustomHeadersCheckbox && customHeadersContainer) {
+      console.log('Elementos encontrados. Configurando visibilidad de cabeceras personalizadas.');
+      
+      // Función para alternar la visibilidad del contenedor de cabeceras
+      const toggleVisibility = () => {
+        console.log('Checkbox estado:', useCustomHeadersCheckbox.checked);
+        customHeadersContainer.style.display = useCustomHeadersCheckbox.checked ? 'block' : 'none';
+      };
+      
+      // Establecer visibilidad inicial
+      toggleVisibility();
+      
+      // Escuchar cambios en el checkbox
+      useCustomHeadersCheckbox.addEventListener('change', function() {
+        console.log('Cambio detectado en checkbox');
+        toggleVisibility();
+      });
+    } else {
+      console.warn('No se encontraron los elementos necesarios para la funcionalidad de cabeceras personalizadas.');
+    }
+  }
+
+  /**
+   * Configura la visualización de campos específicos según el backend seleccionado
+   */
+  function setupBackendSpecificFields() {
+    const backendSelect = document.querySelector('select[name="backend"]');
+    const backendSpecificFields = document.querySelectorAll('.backend-specific');
+    
+    if (backendSelect && backendSpecificFields.length > 0) {
+      console.log('Configurando campos específicos por backend');
+      
+      // Función para mostrar/ocultar campos según el backend seleccionado
+      const updateFieldVisibility = () => {
+        const selectedBackend = backendSelect.value;
+        console.log('Backend seleccionado:', selectedBackend);
+        
+        // Ocultar todos los campos específicos primero
+        backendSpecificFields.forEach(field => {
+          field.style.display = 'none';
+        });
+        
+        // Mostrar los campos para el backend seleccionado
+        const fieldsToShow = document.querySelectorAll(`.backend-specific[data-backend="${selectedBackend}"]`);
+        fieldsToShow.forEach(field => {
+          field.style.display = 'block';
+        });
+        
+        // Campos comunes para todos los backends
+        document.querySelectorAll(`.backend-specific[data-backend="ALL"]`).forEach(field => {
+          field.style.display = 'block';
+        });
+      };
+      
+      // Establecer visibilidad inicial
+      updateFieldVisibility();
+      
+      // Escuchar cambios en el selector de backend
+      backendSelect.addEventListener('change', updateFieldVisibility);
+    }
+  }
+
+  /**
+   * Configura los manejadores de eventos para los botones de acción
+   */
+  function setupButtonActions() {
+    // Configurar el botón de prueba de email
+    setupTestEmailButton();
+  }
+
+  /**
+   * Configura la funcionalidad del botón de prueba de email
+   */
+  function setupTestEmailButton() {
+    const testEmailBtn = document.getElementById('test-email-btn');
+    
+    if (testEmailBtn) {
+      testEmailBtn.addEventListener('click', function() {
+        handleTestEmailClick();
+      });
+    }
+  }
+
+/**
+ * Maneja el evento de clic en el botón de prueba de email
+ * Versión corregida que asegura la inclusión del campo backend
+ */
+ function handleTestEmailClick() {
+  // Mostrar indicador de carga
+  const testEmailBtn = document.getElementById('test-email-btn');
+  const originalBtnText = testEmailBtn.innerHTML;
+  testEmailBtn.disabled = true;
+  testEmailBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Enviando...';
+  
+  // Obtener el formulario y crear FormData
+  const form = document.querySelector('form');
+  const formData = new FormData(form);
+  
+  // Obtener el token CSRF si existe
+  const csrfTokenElement = document.querySelector('[name=csrfmiddlewaretoken]');
+  const csrfToken = csrfTokenElement ? csrfTokenElement.value : '';
+  
+  // PASO 1: Verificar campos obligatorios
+  // Backend
+  const backendSelect = document.querySelector('select[name="backend"]');
+  const selectedBackend = backendSelect ? backendSelect.value : '';
+  
+  if (!selectedBackend) {
+    testEmailBtn.disabled = false;
+    testEmailBtn.innerHTML = originalBtnText;
+    
+    Swal.fire({
+      title: 'Error',
+      text: 'Se requiere seleccionar un tipo de backend para la prueba',
+      icon: 'error',
+      confirmButtonText: 'Entendido'
+    });
+    return;
+  }
+  
+  // From Email
+  const fromEmail = document.querySelector('input[name="from_email"]').value;
+  if (!fromEmail) {
+    testEmailBtn.disabled = false;
+    testEmailBtn.innerHTML = originalBtnText;
+    
+    Swal.fire({
+      title: 'Error',
+      text: 'Se requiere un correo remitente (from_email) para la prueba',
+      icon: 'error',
+      confirmButtonText: 'Entendido'
+    });
+    return;
+  }
+  
+  // PASO 2: Solicitar destinatario de correo de prueba
+  const testRecipient = prompt('Ingrese el correo electrónico de DESTINO para la prueba:', '');
+  if (!testRecipient) {
+    // Si el usuario cancela o no ingresa un correo, restaurar el botón y salir
+    testEmailBtn.disabled = false;
+    testEmailBtn.innerHTML = originalBtnText;
+    
+    Swal.fire({
+      title: 'Error',
+      text: 'Se requiere un correo electrónico para la prueba',
+      icon: 'error',
+      confirmButtonText: 'Entendido'
+    });
+    return;
+  }
+  
+  // PASO 3: Configurar valores fijos para la prueba
+  formData.set('use_console_backend', 'false'); // Asegurar envío real
+  formData.set('test_recipient', testRecipient);
+  formData.set('from_email', fromEmail);
+  formData.set('backend', selectedBackend); // IMPORTANTE: Asegurar que el backend esté incluido
+  
+  console.log('Backend seleccionado para la prueba:', selectedBackend);
+  
+  // PASO 4: Asegurar otros campos según el tipo de backend
+  if (selectedBackend === 'SMTP') {
+    // Validar campos específicos para SMTP
+    const hostField = document.querySelector('input[name="host"]');
+    if (hostField && !hostField.value) {
+      testEmailBtn.disabled = false;
+      testEmailBtn.innerHTML = originalBtnText;
+      
+      Swal.fire({
+        title: 'Error',
+        text: 'Para SMTP, se requiere especificar un servidor (host)',
+        icon: 'error',
+        confirmButtonText: 'Entendido'
+      });
+      return;
+    }
+    
+    // Asegurar campos SMTP
+    const hostValue = hostField ? hostField.value : '';
+    const portField = document.querySelector('input[name="port"]');
+    const portValue = portField ? portField.value : '587'; // Puerto por defecto
+    const usernameField = document.querySelector('input[name="username"]');
+    const passwordField = document.querySelector('input[name="password"]');
+    const securityProtocolField = document.querySelector('select[name="security_protocol"]');
+    
+    formData.set('host', hostValue);
+    formData.set('port', portValue);
+    if (usernameField) formData.set('username', usernameField.value);
+    if (passwordField) formData.set('password', passwordField.value);
+    if (securityProtocolField) formData.set('security_protocol', securityProtocolField.value);
+    
+    console.log('Configuración SMTP para prueba:');
+    console.log('- Host:', hostValue);
+    console.log('- Puerto:', portValue);
+    console.log('- Usuario:', usernameField ? usernameField.value : 'No disponible');
+    console.log('- Protocolo:', securityProtocolField ? securityProtocolField.value : 'Por defecto');
+  }
+  else if (selectedBackend === 'SENDGRID') {
+    const apiKeyField = document.querySelector('input[name="api_key"]');
+    if (apiKeyField) formData.set('api_key', apiKeyField.value);
+    
+    console.log('Configuración SendGrid para prueba (API Key disponible):', !!apiKeyField?.value);
+  }
+  else if (selectedBackend === 'SES') {
+    const usernameField = document.querySelector('input[name="username"]');
+    const passwordField = document.querySelector('input[name="password"]');
+    const apiKeyField = document.querySelector('input[name="api_key"]'); // AWS Region
+    
+    if (usernameField) formData.set('username', usernameField.value);
+    if (passwordField) formData.set('password', passwordField.value);
+    if (apiKeyField) formData.set('api_key', apiKeyField.value);
+    
+    // Mapear para AWS SES específicamente
+    formData.set('aws_access_key', usernameField ? usernameField.value : '');
+    formData.set('aws_secret_key', passwordField ? passwordField.value : '');
+    formData.set('region', apiKeyField ? apiKeyField.value : 'us-east-1');
+    
+    console.log('Configuración AWS SES para prueba:');
+    console.log('- Access Key disponible:', !!usernameField?.value);
+    console.log('- Secret Key disponible:', !!passwordField?.value);
+    console.log('- Región:', apiKeyField ? apiKeyField.value : 'us-east-1');
+  }
+  
+  // Añadir timeout si existe
+  const timeoutField = document.querySelector('input[name="timeout"]');
+  if (timeoutField) formData.set('timeout', timeoutField.value || '30');
+  
+  // PASO 5: Depuración - Mostrar todos los datos que se enviarán
+  const formDataDebug = {};
+  for (let [key, value] of formData.entries()) {
+    formDataDebug[key] = key.includes('password') || key.includes('key') ? '[PROTEGIDO]' : value;
+  }
+  console.log('Datos completos del formulario:', formDataDebug);
+  
+  // PASO 6: Determinar la URL correcta
+  let testEndpoint = '/config/email/test/';  // URL relativa
+  
+  // Si hay un atributo data-test-url en el botón, usarlo
+  if (testEmailBtn.dataset.testUrl) {
+    testEndpoint = testEmailBtn.dataset.testUrl;
+  }
+  
+  console.log('Enviando solicitud a:', testEndpoint);
+  
+  // PASO 7: Enviar solicitud al servidor
+  fetch(testEndpoint, {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-CSRFToken': csrfToken
+    }
+  })
+  .then(response => {
+    console.log('Respuesta recibida:', response);
+    if (!response.ok) {
+      throw new Error('Error en la respuesta del servidor: ' + response.status);
+    }
+    return response.json();
+  })
+  .then(data => {
+    console.log('Datos recibidos:', data);
+    
+    testEmailBtn.disabled = false;
+    testEmailBtn.innerHTML = originalBtnText;
+    
+    if (data.success) {
+      // Mostrar mensaje de éxito con SweetAlert2
+      Swal.fire({
+        title: 'Éxito',
+        text: data.message,
+        icon: 'success',
+        confirmButtonText: 'Aceptar'
+      });
+    } else {
+      // Mostrar error con SweetAlert2
+      Swal.fire({
+        title: 'Error',
+        text: data.error || 'Error desconocido al enviar el email',
+        icon: 'error',
+        confirmButtonText: 'Entendido'
+      });
+    }
+  })
+  .catch(error => {
+    console.error('Error en la solicitud:', error);
+    
+    testEmailBtn.disabled = false;
+    testEmailBtn.innerHTML = originalBtnText;
+    
+    // Mostrar error con SweetAlert2
+    Swal.fire({
+      title: 'Error en la solicitud',
+      text: 'No se pudo procesar la solicitud: ' + error.message,
+      icon: 'error',
+      confirmButtonText: 'Entendido'
+    });
+  });
+}
+
+  /**
+   * Muestra una notificación al usuario
+   */
+  function showNotification(type, title, message) {
+    // Crear el elemento de notificación
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+    notification.setAttribute('role', 'alert');
+    
+    notification.innerHTML = `
+      <strong>${title}</strong>
+      <p>${message}</p>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    // Insertar la notificación al inicio del formulario
+    const form = document.querySelector('form');
+    form.parentNode.insertBefore(notification, form);
+    
+    // Auto-cerrar después de 8 segundos
+    setTimeout(() => {
+      notification.classList.remove('show');
+      setTimeout(() => notification.remove(), 300);
+    }, 8000);
+  }
+
+  /**
+   * Configura la funcionalidad para mostrar/ocultar la contraseña
+   */
+  function setupPasswordToggle() {
+    // Seleccionar los elementos relevantes
+    const passwordField = document.getElementById('password-field');
+    const apiKeyField = document.getElementById('api-key-field');
+    
+    if (passwordField) {
+      // Crear botón para toggle de contraseña
+      const toggleBtn = document.createElement('button');
+      toggleBtn.type = 'button';
+      toggleBtn.className = 'btn btn-outline-secondary password-toggle-btn';
+      toggleBtn.innerHTML = '<span class="material-symbols-outlined">visibility</span>';
+      toggleBtn.title = 'Mostrar/Ocultar Contraseña';
+      
+      // Crear un contenedor para el campo y el botón
+      const inputGroup = document.createElement('div');
+      inputGroup.className = 'input-group';
+      
+      // Obtener el contenedor del campo de contraseña
+      const passwordContainer = passwordField.parentElement;
+      
+      // Reemplazar el campo de contraseña con el grupo
+      passwordField.parentNode.insertBefore(inputGroup, passwordField);
+      inputGroup.appendChild(passwordField);
+      
+      // Añadir el botón al grupo
+      inputGroup.appendChild(toggleBtn);
+      
+      // Función para alternar visibilidad
+      toggleBtn.addEventListener('click', function() {
+        if (passwordField.type === 'password') {
+          passwordField.type = 'text';
+          toggleBtn.innerHTML = '<span class="material-symbols-outlined">visibility_off</span>';
+        } else {
+          passwordField.type = 'password';
+          toggleBtn.innerHTML = '<span class="material-symbols-outlined">visibility</span>';
+        }
+      });
+    }
+    
+    // Lo mismo para el campo de API Key
+    if (apiKeyField) {
+      // Crear botón para toggle de API Key
+      const toggleApiKeyBtn = document.createElement('button');
+      toggleApiKeyBtn.type = 'button';
+      toggleApiKeyBtn.className = 'btn btn-outline-secondary password-toggle-btn';
+      toggleApiKeyBtn.innerHTML = '<span class="material-symbols-outlined">visibility</span>';
+      toggleApiKeyBtn.title = 'Mostrar/Ocultar API Key';
+      
+      // Crear un contenedor para el campo y el botón
+      const apiKeyGroup = document.createElement('div');
+      apiKeyGroup.className = 'input-group';
+      
+      // Reemplazar el campo de API Key con el grupo
+      apiKeyField.parentNode.insertBefore(apiKeyGroup, apiKeyField);
+      apiKeyGroup.appendChild(apiKeyField);
+      
+      // Añadir el botón al grupo
+      apiKeyGroup.appendChild(toggleApiKeyBtn);
+      
+      // Función para alternar visibilidad
+      toggleApiKeyBtn.addEventListener('click', function() {
+        if (apiKeyField.type === 'password') {
+          apiKeyField.type = 'text';
+          toggleApiKeyBtn.innerHTML = '<span class="material-symbols-outlined">visibility_off</span>';
+        } else {
+          apiKeyField.type = 'password';
+          toggleApiKeyBtn.innerHTML = '<span class="material-symbols-outlined">visibility</span>';
+        }
+      });
+    }
+  }
+</script>
+{% endblock %}

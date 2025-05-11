@@ -1,0 +1,535 @@
+{% extends 'index.html' %}
+{% load i18n %}
+{% load static %}
+
+
+{% block stylesheets %}
+{{ block.super }}
+<style>
+  main {
+    padding: 20px;
+  }
+  
+  section {
+    margin-bottom: 30px;
+  }
+  
+  #model-selector {
+    margin-bottom: 20px;
+  }
+  
+  #form-container {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  #data-display {
+    margin-top: 30px;
+  }
+  
+  #data-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  #data-table th, #data-table td {
+    padding: 10px;
+    border: 1px solid #dee2e6;
+  }
+  
+  #data-table th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+  }
+  
+  form .form-group {
+    margin-bottom: 15px;
+  }
+  
+  label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+  }
+  
+  input[type="text"],
+  input[type="number"],
+  textarea,
+  select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    box-sizing: border-box;
+  }
+  
+  button[type="submit"] {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 15px;
+    cursor: pointer;
+  }
+  
+  button[type="submit"]:hover {
+    background-color: #0069d9;
+  }
+</style>
+{% endblock stylesheets %}
+
+{% block content %}
+  <main>
+    <h1>Sistema de Gestión de Cuentas Contables</h1>
+    
+    <div class="row">
+      <div class="col-md-4">
+        <section id="model-selector" class="card mb-4">
+          <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Seleccione un Modelo</h2>
+          </div>
+          <div class="card-body">
+            <select id="model-dropdown" class="form-control">
+              <option value="">-- Seleccione --</option>
+              <option value="GrupoCuenta">Grupo de Cuenta</option>
+              <option value="CuentaMayor">Cuenta Mayor</option>
+              <option value="SubCuenta">Subcuenta</option>
+              <option value="CuentaDetalle">Cuenta Detalle</option>
+              <option value="CuentaAuxiliar">Cuenta Auxiliar</option>
+            </select>
+          </div>
+        </section>
+        
+        <section id="form-container" class="card mb-4">
+          <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Agregar un nuevo registro</h2>
+          </div>
+          <div class="card-body">
+            <form id="data-form" method="post">
+              {% csrf_token %}
+              <div id="form-fields">
+                <!-- Los campos del formulario se generarán dinámicamente aquí -->
+                <div class="alert alert-info">
+                  Seleccione un modelo para ver el formulario
+                </div>
+              </div>
+              <div class="form-group mt-3">
+                <button type="submit" class="btn btn-primary">Guardar</button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </div>
+      
+      <div class="col-md-8">
+        <section id="data-display" class="card">
+          <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h2 class="h5 mb-0">Registros</h2>
+            <span id="current-model-name" class="badge bg-light text-dark">Seleccione un modelo</span>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table id="data-table" class="table table-striped table-bordered">
+                <thead class="thead-dark">
+                  <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Nivel</th>
+                    <th>Naturaleza</th>
+                    <th>Descripción</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colspan="6" class="text-center">Seleccione un modelo para ver los datos</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+{% endblock content %}
+
+{% block javascript %}
+{{ block.super }}
+<script>
+  // Definición de modelos con sus campos
+  window.models = [
+    {
+      name: "GrupoCuenta",
+      fields: [
+        { name: "code", label: "Código", type: "text" },
+        { name: "name", label: "Nombre", type: "text" },
+        { name: "level", label: "Nivel", type: "number" },
+        { name: "naturaleza", label: "Naturaleza", type: "text" },
+        { name: "description", label: "Descripción", type: "textarea" }
+      ]
+    },
+    {
+      name: "CuentaMayor",
+      fields: [
+        { name: "code", label: "Código", type: "text" },
+        { name: "name", label: "Nombre", type: "text" },
+        { name: "level", label: "Nivel", type: "number" },
+        { name: "naturaleza", label: "Naturaleza", type: "text" },
+        { name: "grupo", label: "Grupo", type: "text" },
+        { name: "description", label: "Descripción", type: "textarea" }
+      ]
+    },
+    {
+      name: "SubCuenta",
+      fields: [
+        { name: "code", label: "Código", type: "text" },
+        { name: "name", label: "Nombre", type: "text" },
+        { name: "level", label: "Nivel", type: "number" },
+        { name: "naturaleza", label: "Naturaleza", type: "text" },
+        { name: "cuenta_mayor", label: "Cuenta Mayor", type: "text" },
+        { name: "description", label: "Descripción", type: "textarea" }
+      ]
+    },
+    {
+      name: "CuentaDetalle",
+      fields: [
+        { name: "code", label: "Código", type: "text" },
+        { name: "name", label: "Nombre", type: "text" },
+        { name: "level", label: "Nivel", type: "number" },
+        { name: "naturaleza", label: "Naturaleza", type: "text" },
+        { name: "subcuenta", label: "Subcuenta", type: "text" },
+        { name: "description", label: "Descripción", type: "textarea" },
+        { name: "is_tax_account", label: "Es cuenta fiscal", type: "checkbox" }
+      ]
+    },
+    {
+      name: "CuentaAuxiliar",
+      fields: [
+        { name: "code", label: "Código", type: "text" },
+        { name: "name", label: "Nombre", type: "text" },
+        { name: "level", label: "Nivel", type: "number" },
+        { name: "naturaleza", label: "Naturaleza", type: "text" },
+        { name: "cuenta_detalle", label: "Cuenta Detalle", type: "text" },
+        { name: "description", label: "Descripción", type: "textarea" }
+      ]
+    }
+  ];
+
+  // Función para generar los campos del formulario
+  function generateFormFields(modelName) {
+    const formFields = document.getElementById('form-fields');
+    formFields.innerHTML = '';
+    
+    // Actualizar el nombre del modelo en la interfaz
+    const modelNameDisplay = document.getElementById('current-model-name');
+    if (modelNameDisplay) {
+      modelNameDisplay.textContent = modelName || 'Seleccione un modelo';
+    }
+    
+    // Buscar el modelo seleccionado
+    const model = window.models.find(m => m.name === modelName);
+    
+    if (!model) {
+      formFields.innerHTML = '<div class="alert alert-info">Seleccione un modelo para ver el formulario</div>';
+      return;
+    }
+    
+    // Crear un campo oculto para el nombre del modelo
+    const modelField = document.createElement('input');
+    modelField.type = 'hidden';
+    modelField.name = 'model_name';
+    modelField.value = modelName;
+    formFields.appendChild(modelField);
+    
+    // Generar los campos para cada propiedad del modelo
+    model.fields.forEach(field => {
+      const formGroup = document.createElement('div');
+      formGroup.className = 'form-group mb-3';
+      
+      const label = document.createElement('label');
+      label.setAttribute('for', field.name);
+      label.textContent = field.label;
+      label.className = 'form-label';
+      formGroup.appendChild(label);
+      
+      let input;
+      if (field.type === 'textarea') {
+        input = document.createElement('textarea');
+        input.rows = 3;
+      } else {
+        input = document.createElement('input');
+        input.type = field.type;
+      }
+      
+      input.className = 'form-control';
+      input.id = field.name;
+      input.name = field.name;
+      
+      // Añadir atributos según el tipo de campo
+      if (field.name === 'code') {
+        input.setAttribute('placeholder', 'Ingrese el código');
+        input.setAttribute('pattern', '[0-9]+');
+        input.setAttribute('title', 'Solo se permiten números');
+      } else if (field.name === 'name') {
+        input.setAttribute('placeholder', 'Ingrese el nombre');
+      }
+      
+      if (field.type === 'checkbox') {
+        input.className = 'form-check-input';
+        formGroup.className = 'form-check mb-3';
+        label.className = 'form-check-label';
+        formGroup.insertBefore(input, label);
+      } else {
+        formGroup.appendChild(input);
+      }
+      
+      formFields.appendChild(formGroup);
+    });
+  }
+
+  // Cargar datos desde el backend
+  async function loadData(modelName) {
+    try {
+      // Intenta cargar desde el backend
+      const response = await fetch(`/api/${modelName.toLowerCase()}/`);
+      if (response.ok) {
+        const data = await response.json();
+        populateTable(data, modelName);
+      } else {
+        console.warn('No se pudo cargar desde la API, mostrando datos de ejemplo');
+        // Si hay error, carga datos de ejemplo para demostración
+        const dummyData = getDummyData(modelName);
+        populateTable(dummyData, modelName);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      // En caso de error, mostrar datos de ejemplo en lugar de mostrar alerta
+      console.warn('Mostrando datos de ejemplo temporales');
+      const dummyData = getDummyData(modelName);
+      populateTable(dummyData, modelName);
+    }
+  }
+  
+  // Función para obtener datos de ejemplo según el modelo
+  function getDummyData(modelName) {
+    // Objetos de ejemplo para cada tipo de modelo
+    const dummyDataMap = {
+      'GrupoCuenta': [
+        { id: 1, code: '1', name: 'Activo', level: 1, naturaleza: 'Débito', description: 'Grupo de cuentas de activos' },
+        { id: 2, code: '2', name: 'Pasivo', level: 1, naturaleza: 'Crédito', description: 'Grupo de cuentas de pasivos' },
+        { id: 3, code: '3', name: 'Patrimonio', level: 1, naturaleza: 'Crédito', description: 'Grupo de cuentas de patrimonio' }
+      ],
+      'CuentaMayor': [
+        { id: 1, code: '11', name: 'Disponible', level: 2, naturaleza: 'Débito', grupo: '1', description: 'Efectivo y equivalentes' },
+        { id: 2, code: '12', name: 'Inversiones', level: 2, naturaleza: 'Débito', grupo: '1', description: 'Inversiones a corto y largo plazo' }
+      ],
+      'SubCuenta': [
+        { id: 1, code: '1105', name: 'Caja', level: 3, naturaleza: 'Débito', cuenta_mayor: '11', description: 'Dinero en efectivo' },
+        { id: 2, code: '1110', name: 'Bancos', level: 3, naturaleza: 'Débito', cuenta_mayor: '11', description: 'Dinero en cuentas bancarias' }
+      ],
+      'CuentaDetalle': [
+        { id: 1, code: '110505', name: 'Caja General', level: 4, naturaleza: 'Débito', subcuenta: '1105', description: 'Caja principal', is_tax_account: false },
+        { id: 2, code: '111005', name: 'Bancos Nacionales', level: 4, naturaleza: 'Débito', subcuenta: '1110', description: 'Cuentas en bancos nacionales', is_tax_account: false }
+      ],
+      'CuentaAuxiliar': [
+        { id: 1, code: '11050501', name: 'Caja General Sede Principal', level: 5, naturaleza: 'Débito', cuenta_detalle: '110505', description: 'Caja general de la sede principal' },
+        { id: 2, code: '11100501', name: 'Banco ABC Cuenta Corriente', level: 5, naturaleza: 'Débito', cuenta_detalle: '111005', description: 'Cuenta corriente principal en Banco ABC' }
+      ]
+    };
+    
+    return dummyDataMap[modelName] || [];
+  }
+
+  // Poblar la tabla con los datos
+  function populateTable(data, modelName) {
+    const tableBody = document.querySelector('#data-table tbody');
+    tableBody.innerHTML = '';
+    
+    // Obtener el modelo para conocer sus campos
+    const model = window.models.find(m => m.name === modelName);
+    
+    data.forEach(item => {
+      const row = document.createElement('tr');
+      
+      // Agregar las celdas para cada propiedad visible en la tabla
+      row.innerHTML = `
+        <td>${item.code || ''}</td>
+        <td>${item.name || ''}</td>
+        <td>${item.level || ''}</td>
+        <td>${item.naturaleza || ''}</td>
+        <td>${item.description || ''}</td>
+        <td>
+          <button class="btn btn-sm btn-info edit-btn" data-id="${item.id}">Editar</button>
+          <button class="btn btn-sm btn-danger delete-btn" data-id="${item.id}">Eliminar</button>
+        </td>
+      `;
+      
+      tableBody.appendChild(row);
+    });
+    
+    // Agregar event listeners para los botones de editar y eliminar
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+      btn.addEventListener('click', () => editItem(btn.dataset.id, modelName));
+    });
+    
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', () => deleteItem(btn.dataset.id, modelName));
+    });
+  }
+
+  // Función para editar un elemento
+  async function editItem(id, modelName) {
+    try {
+      const response = await fetch(`/api/${modelName.toLowerCase()}/${id}/`);
+      if (!response.ok) {
+        throw new Error('Error al obtener el elemento');
+      }
+      
+      const item = await response.json();
+      
+      // Seleccionar el modelo adecuado
+      document.getElementById('model-dropdown').value = modelName;
+      generateFormFields(modelName);
+      
+      // Llenar el formulario con los datos del elemento
+      const model = window.models.find(m => m.name === modelName);
+      model.fields.forEach(field => {
+        const input = document.getElementById(field.name);
+        if (input) {
+          if (field.type === 'checkbox') {
+            input.checked = item[field.name];
+          } else {
+            input.value = item[field.name] || '';
+          }
+        }
+      });
+      
+      // Cambiar el formulario a modo de edición
+      const form = document.getElementById('data-form');
+      form.dataset.mode = 'edit';
+      form.dataset.id = id;
+      
+      // Cambiar el texto del botón
+      const submitButton = form.querySelector('button[type="submit"]');
+      submitButton.textContent = 'Actualizar';
+      
+      // Desplazarse al formulario
+      document.getElementById('form-container').scrollIntoView({ behavior: 'smooth' });
+    } catch (error) {
+      console.error('Error:', error);
+      alert('No se pudo cargar el elemento para editar');
+    }
+  }
+
+  // Función para eliminar un elemento
+  async function deleteItem(id, modelName) {
+    if (!confirm('¿Está seguro de que desea eliminar este elemento?')) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/${modelName.toLowerCase()}/${id}/`, {
+        method: 'DELETE',
+        headers: {
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Error al eliminar');
+      }
+      
+      // Recargar los datos
+      loadData(modelName);
+      alert('Elemento eliminado correctamente');
+    } catch (error) {
+      console.error('Error:', error);
+      alert('No se pudo eliminar el elemento');
+    }
+  }
+
+  // Enviar el formulario
+  async function submitForm(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const modelName = formData.get('model_name');
+    
+    if (!modelName) {
+      alert('Por favor, seleccione un modelo');
+      return;
+    }
+    
+    const url = form.dataset.mode === 'edit' 
+      ? `/api/${modelName.toLowerCase()}/${form.dataset.id}/` 
+      : `/api/${modelName.toLowerCase()}/`;
+    
+    const method = form.dataset.mode === 'edit' ? 'PUT' : 'POST';
+    
+    try {
+      const response = await fetch(url, {
+        method: method,
+        body: formData,
+        headers: {
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Error al guardar');
+      }
+      
+      // Limpiar el formulario
+      form.reset();
+      form.dataset.mode = 'create';
+      document.querySelector('button[type="submit"]').textContent = 'Guardar';
+      
+      // Recargar los datos
+      loadData(modelName);
+      alert('Datos guardados correctamente');
+    } catch (error) {
+      console.error('Error:', error);
+      alert('No se pudieron guardar los datos');
+    }
+  }
+
+  // Event Listeners
+  document.addEventListener('DOMContentLoaded', () => {
+    const modelDropdown = document.getElementById('model-dropdown');
+    const dataForm = document.getElementById('data-form');
+    
+    // Cargar el primer modelo automáticamente al iniciar
+    if (modelDropdown.options.length > 1) {
+      modelDropdown.selectedIndex = 1; // Seleccionar el primer modelo (GrupoCuenta)
+      const selectedModel = modelDropdown.value;
+      generateFormFields(selectedModel);
+      loadData(selectedModel);
+    }
+    
+    modelDropdown.addEventListener('change', () => {
+      const selectedModel = modelDropdown.value;
+      if (selectedModel) {
+        generateFormFields(selectedModel);
+        loadData(selectedModel);
+      } else {
+        document.getElementById('form-fields').innerHTML = '';
+        document.querySelector('#data-table tbody').innerHTML = '';
+      }
+    });
+    
+    dataForm.addEventListener('submit', submitForm);
+    
+    // Si la tabla está vacía, mostrar mensaje
+    const tableBody = document.querySelector('#data-table tbody');
+    if (tableBody.innerHTML.trim() === '') {
+      const row = document.createElement('tr');
+      row.innerHTML = '<td colspan="6" class="text-center">Seleccione un modelo para ver los datos</td>';
+      tableBody.appendChild(row);
+    }
+  });
+</script>
+{% endblock javascript %}

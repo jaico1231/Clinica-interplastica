@@ -1,0 +1,338 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>{{ title|default:"Iniciar sesión" }}</title>
+  <link rel="stylesheet" href="{% static 'assets/css/login.css' %}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@6.5.95/css/materialdesignicons.min.css">
+  <style>
+    .auth-form-transparent {
+      max-width: 450px;
+      background: #fff;
+      border-radius: 10px;
+      padding: 40px !important;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .login-container {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #294deb, #8d8bce);
+    }
+    
+    .brand-logo img {
+      width: 180px;
+      margin-bottom: 1.5rem;
+    }
+    
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    
+    .password-feedback {
+      font-size: 0.8rem;
+      padding: 0.3rem 0;
+    }
+    
+    .password-status {
+      display: flex;
+      margin-top: 5px;
+    }
+    
+    .password-status .status-indicator {
+      height: 5px;
+      flex: 1;
+      margin-right: 2px;
+      background-color: #e9ecef;
+      border-radius: 2px;
+    }
+    
+    .password-status .active {
+      background-color: #28a745;
+    }
+    
+    .password-status .medium {
+      background-color: #ffc107;
+    }
+    
+    .password-status .weak {
+      background-color: #dc3545;
+    }
+    
+    .auth-link {
+      text-decoration: none;
+      color: #4054b2;
+    }
+    
+    .auth-link:hover {
+      text-decoration: underline;
+    }
+    
+    .btn-primary {
+      background-color: #4054b2;
+      border-color: #4054b2;
+      padding: 10px 25px;
+      font-weight: 500;
+    }
+    
+    .btn-primary:hover {
+      background-color: #354595;
+      border-color: #32408c;
+    }
+    
+    .login-image {
+      background-size: cover;
+      background-position: center;
+      min-height: 100%;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+    
+    .login-image img {
+      object-fit: cover;
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    
+    .login-image .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.7));
+    }
+    
+    .login-image .copyright {
+      position: relative;
+      padding: 1rem;
+      z-index: 1;
+    }
+    
+    .input-group-text {
+      background-color: transparent;
+      cursor: pointer;
+    }
+    
+    .alert {
+      margin-bottom: 1rem;
+    }
+  </style>
+  <link rel="shortcut icon" href="{% static 'images/favicon.png' %}" />
+</head>
+
+<body>
+  <div class="login-container d-flex align-items-center justify-content-center">
+    <div class="container">
+      <div class="row bg-white rounded-3 overflow-hidden shadow-lg">
+        <!-- Formulario de login -->
+        <div class="col-md-6 p-0">
+          <div class="h-100 d-flex align-items-center justify-content-center p-4">
+            <div class="auth-form-transparent">
+              <div class="brand-logo text-center">
+                <img src="{% static 'assets/img/logos/logo-color.png' %}" alt="logo">
+              </div>
+              
+              <!-- Mensajes de Django -->
+              {% if messages %}
+                <div id="login-messages">
+                  {% for message in messages %}
+                    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                      {{ message }}
+                      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+              
+              <!-- Formulario Django -->
+              <form method="post" id="login-form" class="mt-4">
+                {% csrf_token %}
+                
+                <!-- Errores de formulario no específicos de un campo -->
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                  {% for error in form.non_field_errors %}
+                    {{ error }}
+                  {% endfor %}
+                </div>
+                {% endif %}
+                
+                <div class="form-group">
+                  <label for="{{ form.username.id_for_label }}" class="form-label">{{ form.username.label }}</label>
+                  <div class="input-group">
+                    <span class="input-group-text border-end-0">
+                      <i class="mdi mdi-account-outline text-primary"></i>
+                    </span>
+                    {{ form.username }}
+                  </div>
+                  {% if form.username.errors %}
+                    <div class="invalid-feedback d-block">
+                      {% for error in form.username.errors %}
+                        {{ error }}
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                </div>
+                
+                <div class="form-group">
+                  <label for="{{ form.password.id_for_label }}" class="form-label">{{ form.password.label }}</label>
+                  <div class="input-group">
+                    <span class="input-group-text border-end-0">
+                      <i class="mdi mdi-lock-outline text-primary"></i>
+                    </span>
+                    {{ form.password }}
+                    <span class="input-group-text border-start-0 password-toggle">
+                      <i class="mdi mdi-eye text-primary"></i>
+                    </span>
+                  </div>
+                  <div class="password-feedback d-none">
+                    <div class="text-muted mb-1 password-hint">La contraseña debe incluir al menos 6 caracteres</div>
+                    <div class="password-status">
+                      <div class="status-indicator" id="strength-1"></div>
+                      <div class="status-indicator" id="strength-2"></div>
+                      <div class="status-indicator" id="strength-3"></div>
+                      <div class="status-indicator" id="strength-4"></div>
+                    </div>
+                  </div>
+                  {% if form.password.errors %}
+                    <div class="invalid-feedback d-block">
+                      {% for error in form.password.errors %}
+                        {{ error }}
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                  <div class="form-check">
+                    {{ form.remember_me }}
+                    <label class="form-check-label text-muted" for="{{ form.remember_me.id_for_label }}">
+                      {{ form.remember_me.label }}
+                    </label>
+                  </div>
+                  <a href="#" class="auth-link">¿Olvidaste tu contraseña?</a>
+                </div>
+                
+                <div class="d-grid gap-2">
+                  <button type="submit" class="btn btn-primary btn-lg">
+                    Iniciar sesión
+                  </button>
+                </div>
+                
+                <div class="text-center mt-4">
+                  <!-- <span class="text-muted">¿No tienes una cuenta?</span>
+                  <a href="#" class="auth-link ms-1">Regístrate aquí</a> -->
+                </div>
+                
+                <!-- Campo para redirigir después del login -->
+                {% if next %}
+                  <input type="hidden" name="next" value="{{ next }}">
+                {% endif %}
+              </form>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Imagen lateral -->
+        <div class="col-md-6 p-0">
+          <div class="login-image">
+            <img src="{% static 'assets/img/theme/conexion.avif' %}" alt="Login background">
+            <div class="overlay"></div>
+            <div class="copyright text-center text-white">
+              <p class="mb-0">© {% now "Y" %} - Todos los derechos reservados</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    $(document).ready(function() {
+      // Configurar campos para mejorar la apariencia
+      $('#{{ form.username.id_for_label }}').addClass('form-control border-start-0');
+      $('#{{ form.password.id_for_label }}').addClass('form-control border-start-0');
+      $('#{{ form.remember_me.id_for_label }}').addClass('form-check-input');
+      
+      // Auto-cerrar alertas después de 5 segundos
+      setTimeout(function() {
+        $('.alert').alert('close');
+      }, 5000);
+      
+      // Variables para elementos del DOM
+      const $passwordInput = $('#{{ form.password.id_for_label }}');
+      const $passwordToggle = $('.password-toggle');
+      const $passwordFeedback = $('.password-feedback');
+      
+      // Mostrar fortaleza de contraseña
+      $passwordInput.on('input', function() {
+        updatePasswordStrength($(this).val());
+      });
+      
+      // Mostrar/ocultar contraseña
+      $passwordToggle.on('click', function() {
+        const type = $passwordInput.attr('type') === 'password' ? 'text' : 'password';
+        $passwordInput.attr('type', type);
+        
+        const $icon = $(this).find('i');
+        $icon.toggleClass('mdi-eye mdi-eye-off');
+      });
+      
+      /**
+       * Actualiza los indicadores de fortaleza de la contraseña
+       * @param {String} password - La contraseña a evaluar
+       */
+      function updatePasswordStrength(password) {
+        let strength = 0;
+        
+        // Reset indicators
+        $('.status-indicator').removeClass('active weak medium');
+        
+        if (password.length === 0) {
+          $passwordFeedback.addClass('d-none');
+          return;
+        }
+        
+        $passwordFeedback.removeClass('d-none');
+        
+        // Evaluar fortaleza
+        if (password.length >= 6) strength++;
+        if (password.length >= 8) strength++;
+        if (/[A-Z]/.test(password)) strength++;
+        if (/[0-9]/.test(password)) strength++;
+        if (/[^A-Za-z0-9]/.test(password)) strength++;
+        
+        // Actualizar indicadores visuales
+        for (let i = 1; i <= strength && i <= 4; i++) {
+          if (strength <= 2) {
+            $(`#strength-${i}`).addClass('weak');
+          } else if (strength <= 3) {
+            $(`#strength-${i}`).addClass('medium');
+          } else {
+            $(`#strength-${i}`).addClass('active');
+          }
+        }
+        
+        // Actualizar mensaje
+        if (strength <= 2) {
+          $('.password-hint').text('Contraseña débil - Añade letras mayúsculas y números');
+        } else if (strength <= 3) {
+          $('.password-hint').text('Contraseña media - Añade caracteres especiales');
+        } else {
+          $('.password-hint').text('Contraseña fuerte');
+        }
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,303 @@
+{# Template base para listados - accounting/base_list.html #}
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h4>{{ title }}</h4>
+        {% if create_perm %}
+        <a href="{{ create_url }}" class="btn btn-light">
+            <i class="fas fa-plus"></i> {% trans 'Crear' %}
+        </a>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% block filters %}{% endblock %}
+        
+        {% if object_list %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        {% block thead %}{% endblock %}
+                        <th class="text-center">{% trans 'Acciones' %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% block tbody %}{% endblock %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            {% trans 'No hay registros para mostrar' %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{# Template para listado de Naturalezas - accounting/naturaleza/naturaleza_list.html #}
+{% extends 'accounting/base_list.html' %}
+{% load i18n %}
+
+{% block thead %}
+<th>{% trans 'Código' %}</th>
+<th>{% trans 'Nombre' %}</th>
+<th>{% trans 'Descripción' %}</th>
+{% endblock %}
+
+{% block tbody %}
+{% for naturaleza in naturalezas %}
+<tr>
+    <td>{{ naturaleza.code }}</td>
+    <td>{{ naturaleza.name }}</td>
+    <td>{{ naturaleza.description|truncatechars:50 }}</td>
+    <td class="text-center">
+        {% if perms.accounting.view_naturaleza %}
+        <a href="{% url 'naturaleza_detail' naturaleza.pk %}" class="btn btn-sm btn-info" title="{% trans 'Ver' %}">
+            <i class="fas fa-eye"></i>
+        </a>
+        {% endif %}
+        {% if perms.accounting.change_naturaleza %}
+        <a href="{% url 'naturaleza_update' naturaleza.pk %}" class="btn btn-sm btn-warning" title="{% trans 'Editar' %}">
+            <i class="fas fa-edit"></i>
+        </a>
+        {% endif %}
+        {% if perms.accounting.delete_naturaleza %}
+        <a href="{% url 'naturaleza_delete' naturaleza.pk %}" class="btn btn-sm btn-danger" title="{% trans 'Eliminar' %}">
+            <i class="fas fa-trash"></i>
+        </a>
+        {% endif %}
+    </td>
+</tr>
+{% endfor %}
+{% endblock %}
+
+{# Template para listado de GrupoCuenta - accounting/grupocuenta/grupocuenta_list.html #}
+{% extends 'accounting/base_list.html' %}
+{% load i18n %}
+
+{% block thead %}
+<th>{% trans 'Código' %}</th>
+<th>{% trans 'Nombre' %}</th>
+<th>{% trans 'Nivel' %}</th>
+<th>{% trans 'Naturaleza' %}</th>
+{% endblock %}
+
+{% block tbody %}
+{% for grupocuenta in grupos_cuenta %}
+<tr>
+    <td>{{ grupocuenta.code }}</td>
+    <td>{{ grupocuenta.name }}</td>
+    <td>{{ grupocuenta.level }}</td>
+    <td>{{ grupocuenta.naturaleza }}</td>
+    <td class="text-center">
+        {% if perms.accounting.view_grupocuenta %}
+        <a href="{% url 'grupocuenta_detail' grupocuenta.pk %}" class="btn btn-sm btn-info" title="{% trans 'Ver' %}">
+            <i class="fas fa-eye"></i>
+        </a>
+        {% endif %}
+        {% if perms.accounting.change_grupocuenta %}
+        <a href="{% url 'grupocuenta_update' grupocuenta.pk %}" class="btn btn-sm btn-warning" title="{% trans 'Editar' %}">
+            <i class="fas fa-edit"></i>
+        </a>
+        {% endif %}
+        {% if perms.accounting.delete_grupocuenta %}
+        <a href="{% url 'grupocuenta_delete' grupocuenta.pk %}" class="btn btn-sm btn-danger" title="{% trans 'Eliminar' %}">
+            <i class="fas fa-trash"></i>
+        </a>
+        {% endif %}
+    </td>
+</tr>
+{% endfor %}
+{% endblock %}
+
+{# Template para listado de CuentaMayor - accounting/cuentamayor/cuentamayor_list.html #}
+{% extends 'accounting/base_list.html' %}
+{% load i18n %}
+
+{% block thead %}
+<th>{% trans 'Código' %}</th>
+<th>{% trans 'Nombre' %}</th>
+<th>{% trans 'Nivel' %}</th>
+<th>{% trans 'Grupo' %}</th>
+<th>{% trans 'Naturaleza' %}</th>
+{% endblock %}
+
+{% block tbody %}
+{% for cuentamayor in cuentas_mayor %}
+<tr>
+    <td>{{ cuentamayor.code }}</td>
+    <td>{{ cuentamayor.name }}</td>
+    <td>{{ cuentamayor.level }}</td>
+    <td>{{ cuentamayor.grupo }}</td>
+    <td>{{ cuentamayor.naturaleza }}</td>
+    <td class="text-center">
+        {% if perms.accounting.view_cuentamayor %}
+        <a href="{% url 'cuentamayor_detail' cuentamayor.pk %}" class="btn btn-sm btn-info" title="{% trans 'Ver' %}">
+            <i class="fas fa-eye"></i>
+        </a>
+        {% endif %}
+        {% if perms.accounting.change_cuentamayor %}
+        <a href="{% url 'cuentamayor_update' cuentamayor.pk %}" class="btn btn-sm btn-warning" title="{% trans 'Editar' %}">
+            <i class="fas fa-edit"></i>
+        </a>
+        {% endif %}
+        {% if perms.accounting.delete_cuentamayor %}
+        <a href="{% url 'cuentamayor_delete' cuentamayor.pk %}" class="btn btn-sm btn-danger" title="{% trans 'Eliminar' %}">
+            <i class="fas fa-trash"></i>
+        </a>
+        {% endif %}
+    </td>
+</tr>
+{% endfor %}
+{% endblock %}
+
+{# Template para listado de SubCuenta - accounting/subcuenta/subcuenta_list.html #}
+{% extends 'accounting/base_list.html' %}
+{% load i18n %}
+
+{% block thead %}
+<th>{% trans 'Código' %}</th>
+<th>{% trans 'Nombre' %}</th>
+<th>{% trans 'Nivel' %}</th>
+<th>{% trans 'Cuenta Mayor' %}</th>
+<th>{% trans 'Naturaleza' %}</th>
+{% endblock %}
+
+{% block tbody %}
+{% for subcuenta in subcuentas %}
+<tr>
+    <td>{{ subcuenta.code }}</td>
+    <td>{{ subcuenta.name }}</td>
+    <td>{{ subcuenta.level }}</td>
+    <td>{{ subcuenta.cuenta_mayor }}</td>
+    <td>{{ subcuenta.naturaleza }}</td>
+    <td class="text-center">
+        {% if perms.accounting.view_subcuenta %}
+        <a href="{% url 'subcuenta_detail' subcuenta.pk %}" class="btn btn-sm btn-info" title="{% trans 'Ver' %}">
+            <i class="fas fa-eye"></i>
+        </a>
+        {% endif %}
+        {% if perms.accounting.change_subcuenta %}
+        <a href="{% url 'subcuenta_update' subcuenta.pk %}" class="btn btn-sm btn-warning" title="{% trans 'Editar' %}">
+            <i class="fas fa-edit"></i>
+        </a>
+        {% endif %}
+        {% if perms.accounting.delete_subcuenta %}
+        <a href="{% url 'subcuenta_delete' subcuenta.pk %}" class="btn btn-sm btn-danger" title="{% trans 'Eliminar' %}">
+            <i class="fas fa-trash"></i>
+        </a>
+        {% endif %}
+    </td>
+</tr>
+{% endfor %}
+{% endblock %}
+
+{# Template para listado de CuentaDetalle - accounting/cuentadetalle/cuentadetalle_list.html #}
+{% extends 'accounting/base_list.html' %}
+{% load i18n %}
+
+{% block thead %}
+<th>{% trans 'Código' %}</th>
+<th>{% trans 'Nombre' %}</th>
+<th>{% trans 'Nivel' %}</th>
+<th>{% trans 'Subcuenta' %}</th>
+<th>{% trans 'Naturaleza' %}</th>
+<th>{% trans 'Cuenta Fiscal' %}</th>
+{% endblock %}
+
+{% block tbody %}
+{% for cuentadetalle in cuentas_detalle %}
+<tr>
+    <td>{{ cuentadetalle.code }}</td>
+    <td>{{ cuentadetalle.name }}</td>
+    <td>{{ cuentadetalle.level }}</td>
+    <td>{{ cuentadetalle.subcuenta }}</td>
+    <td>{{ cuentadetalle.naturaleza }}</td>
+    <td>
+        {% if cuentadetalle.is_tax_account %}
+            <span class="badge bg-success">{% trans 'Sí' %}</span>
+        {% else %}
+            <span class="badge bg-secondary">{% trans 'No' %}</span>
+        {% endif %}
+    </td>
+    <td class="text-center">
+        {% if perms.accounting.view_cuentadetalle %}
+        <a href="{% url 'cuentadetalle_detail' cuentadetalle.pk %}" class="btn btn-sm btn-info" title="{% trans 'Ver' %}">
+            <i class="fas fa-eye"></i>
+        </a>
+        {% endif %}
+        {% if perms.accounting.change_cuentadetalle %}
+        <a href="{% url 'cuentadetalle_update' cuentadetalle.pk %}" class="btn btn-sm btn-warning" title="{% trans 'Editar' %}">
+            <i class="fas fa-edit"></i>
+        </a>
+        {% endif %}
+        {% if perms.accounting.delete_cuentadetalle %}
+        <a href="{% url 'cuentadetalle_delete' cuentadetalle.pk %}" class="btn btn-sm btn-danger" title="{% trans 'Eliminar' %}">
+            <i class="fas fa-trash"></i>
+        </a>
+        {% endif %}
+    </td>
+</tr>
+{% endfor %}
+{% endblock %}
+
+{# Template para listado de CuentaAuxiliar - accounting/cuentaauxiliar/cuentaauxiliar_list.html #}
+{% extends 'accounting/base_list.html' %}
+{% load i18n %}
+
+{% block thead %}
+<th>{% trans 'Código' %}</th>
+<th>{% trans 'Nombre' %}</th>
+<th>{% trans 'Nivel' %}</th>
+<th>{% trans 'Cuenta Detalle' %}</th>
+<th>{% trans 'Naturaleza' %}</th>
+<th>{% trans 'Cuenta Fiscal' %}</th>
+<th>{% trans 'Permite Movimientos' %}</th>
+{% endblock %}
+
+{% block tbody %}
+{% for cuentaauxiliar in cuentas_auxiliares %}
+<tr>
+    <td>{{ cuentaauxiliar.code }}</td>
+    <td>{{ cuentaauxiliar.name }}</td>
+    <td>{{ cuentaauxiliar.level }}</td>
+    <td>{{ cuentaauxiliar.cuenta_detalle }}</td>
+    <td>{{ cuentaauxiliar.naturaleza }}</td>
+    <td>
+        {% if cuentaauxiliar.is_tax_account %}
+            <span class="badge bg-success">{% trans 'Sí' %}</span>
+        {% else %}
+            <span class="badge bg-secondary">{% trans 'No' %}</span>
+        {% endif %}
+    </td>
+    <td>
+        {% if cuentaauxiliar.allows_movements %}
+            <span class="badge bg-success">{% trans 'Sí' %}</span>
+        {% else %}
+            <span class="badge bg-danger">{% trans 'No' %}</span>
+        {% endif %}
+    </td>
+    <td class="text-center">
+        {% if perms.accounting.view_cuentaauxiliar %}
+        <a href="{% url 'cuentaauxiliar_detail' cuentaauxiliar.pk %}" class="btn btn-sm btn-info" title="{% trans 'Ver' %}">
+            <i class="fas fa-eye"></i>
+        </a>
+        {% endif %}
+        {% if perms.accounting.change_cuentaauxiliar %}
+        <a href="{% url 'cuentaauxiliar_update' cuentaauxiliar.pk %}" class="btn btn-sm btn-warning" title="{% trans 'Editar' %}">
+            <i class="fas fa-edit"></i>
+        </a>
+        {% endif %}
+        {% if perms.accounting.delete_cuentaauxiliar %}
+        <a href="{% url 'cuentaauxiliar_delete' cuentaauxiliar.pk %}" class="btn btn-sm btn-danger" title="{% trans 'Eliminar' %}">
+            <i class="fas fa-trash"></i>
+        </a>
+        {% endif %}
+    </td>
+</tr>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,387 @@
+{% extends 'surveys/base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if question %}Editar Pregunta{% else %}Nueva Pregunta{% endif %}
+{% endblock %}
+
+{% block header %}
+    {% if question %}
+        Editar Pregunta
+    {% else %}
+        Añadir Pregunta a {{ survey.title }}
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    <div class="mb-3">
+        <a href="{% if question %}{% url 'surveys:question_list' question.survey.id %}{% else %}{% url 'surveys:question_list' survey.id %}{% endif %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver a la Lista de Preguntas
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <label for="{{ form.text.id_for_label }}" class="form-label">{{ form.text.label }}*</label>
+                        {{ form.text }}
+                        {% if form.text.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.text.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label for="{{ form.question_type.id_for_label }}" class="form-label">{{ form.question_type.label }}*</label>
+                        {{ form.question_type|add_class:"form-control" }}
+                        {% if form.question_type.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.question_type.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <label for="{{ form.help_text.id_for_label }}" class="form-label">{{ form.help_text.label }}</label>
+                        {{ form.help_text }}
+                        {% if form.help_text.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.help_text.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Texto de ayuda o instrucciones adicionales para esta pregunta.</div>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label for="{{ form.order.id_for_label }}" class="form-label">{{ form.order.label }}</label>
+                        {{ form.order }}
+                        {% if form.order.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.order.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <div class="form-check form-switch mt-4">
+                            {{ form.is_required|add_class:"form-check-input" }}
+                            <label for="{{ form.is_required.id_for_label }}" class="form-check-label">
+                                {{ form.is_required.label }}
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Campos para preguntas numéricas -->
+                <div class="row mb-3" id="numeric-options" style="display: none;">
+                    <div class="col-md-6">
+                        <label for="{{ form.min_value.id_for_label }}" class="form-label">{{ form.min_value.label }}</label>
+                        {{ form.min_value|add_class:"form-control" }}
+                        {% if form.min_value.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.min_value.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="{{ form.max_value.id_for_label }}" class="form-label">{{ form.max_value.label }}</label>
+                        {{ form.max_value|add_class:"form-control" }}
+                        {% if form.max_value.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.max_value.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Lógica condicional -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.dependent_on.id_for_label }}" class="form-label">{{ form.dependent_on.label }}</label>
+                        {{ form.dependent_on|add_class:"form-control" }}
+                        {% if form.dependent_on.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.dependent_on.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Pregunta de la que depende esta pregunta (opcional).</div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="{{ form.dependent_value.id_for_label }}" class="form-label">{{ form.dependent_value.label }}</label>
+                        {{ form.dependent_value }}
+                        {% if form.dependent_value.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.dependent_value.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Valor que debe tener la pregunta dependiente para mostrar esta.</div>
+                    </div>
+                </div>
+                
+                <!-- Opciones para preguntas de selección -->
+                <div id="choices-container" style="display: none;">
+                    <h4 class="mt-4 mb-3">Opciones de Respuesta</h4>
+                    
+                    {{ choice_formset.management_form }}
+                    
+                    <div class="card">
+                        <div class="card-body">
+                            <table class="table table-sm" id="choices-table">
+                                <thead>
+                                    <tr>
+                                        <th width="50%">Texto de la Opción</th>
+                                        <th width="30%">Valor</th>
+                                        <th width="15%">Orden</th>
+                                        <th width="5%">Eliminar</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for choice_form in choice_formset %}
+                                        <tr class="choice-form">
+                                            <td>
+                                                {{ choice_form.id }}
+                                                {{ choice_form.text|add_class:"form-control" }}
+                                                {% if choice_form.text.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in choice_form.text.errors %}
+                                                            {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {{ choice_form.value|add_class:"form-control" }}
+                                                {% if choice_form.value.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in choice_form.value.errors %}
+                                                            {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {{ choice_form.order|add_class:"form-control" }}
+                                                {% if choice_form.order.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in choice_form.order.errors %}
+                                                            {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                {% if choice_form.instance.pk %}
+                                                    {{ choice_form.DELETE|add_class:"form-check-input delete-checkbox" }}
+                                                {% else %}
+                                                    <button type="button" class="btn btn-sm btn-danger remove-choice">
+                                                        <i class="fas fa-times"></i>
+                        </button>
+                    </td>
+                `;
+            }
+            
+            // Actualizar los IDs y nombres de los campos
+            const inputs = newRow.querySelectorAll('input');
+            inputs.forEach(input => {
+                // Resetear el valor
+                input.value = '';
+                
+                // Actualizar name e id con el nuevo índice
+                const oldName = input.getAttribute('name');
+                if (oldName) {
+                    const newName = oldName.replace(/choices-\d+-/, `choices-${currentForms}-`);
+                    input.setAttribute('name', newName);
+                }
+                
+                const oldId = input.getAttribute('id');
+                if (oldId) {
+                    const newId = oldId.replace(/id_choices-\d+-/, `id_choices-${currentForms}-`);
+                    input.setAttribute('id', newId);
+                }
+                
+                // Limpiar clases de error si existen
+                input.classList.remove('is-invalid');
+            });
+            
+            // Establecer valores si se pasaron
+            if (text) {
+                newRow.querySelector('[name$="-text"]').value = text;
+            }
+            if (value) {
+                newRow.querySelector('[name$="-value"]').value = value;
+            }
+            if (order) {
+                newRow.querySelector('[name$="-order"]').value = order;
+            }
+            
+            // Asegurarse de que el botón eliminar tenga el evento correcto
+            const removeBtn = newRow.querySelector('.remove-choice');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function() {
+                    this.closest('tr').remove();
+                    updateTotalForms();
+                });
+            }
+            
+            // Añadir la nueva fila
+            choicesTable.appendChild(newRow);
+            
+            // Actualizar el contador de formularios
+            totalForms.value = currentForms + 1;
+        }
+        
+        // Función para actualizar el contador de formularios
+        function updateTotalForms() {
+            const totalForms = document.getElementById('id_choices-TOTAL_FORMS');
+            const currentForms = choicesTable.querySelectorAll('tr.choice-form').length;
+            totalForms.value = currentForms;
+        }
+        
+        // Evento click para añadir opción
+        if (addChoiceBtn) {
+            addChoiceBtn.addEventListener('click', function() {
+                const rows = choicesTable.querySelectorAll('tr.choice-form');
+                const nextOrder = rows.length > 0 ? rows.length + 1 : 1;
+                addChoiceRow('', '', nextOrder);
+            });
+        }
+        
+        // Evento click para eliminar opción
+        document.querySelectorAll('.remove-choice').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.closest('tr').remove();
+                updateTotalForms();
+            });
+        });
+    });
+</script>
+{% endblock %}
+                                                    </button>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            
+                            <button type="button" id="add-choice" class="btn btn-sm btn-primary mt-2">
+                                <i class="fas fa-plus"></i> Añadir Opción
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% if question %}{% url 'surveys:question_list' question.survey.id %}{% else %}{% url 'surveys:question_list' survey.id %}{% endif %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Guardar Pregunta
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const questionTypeSelect = document.getElementById('{{ form.question_type.id_for_label }}');
+        const choicesContainer = document.getElementById('choices-container');
+        const numericOptions = document.getElementById('numeric-options');
+        const addChoiceBtn = document.getElementById('add-choice');
+        const choicesTable = document.getElementById('choices-table').querySelector('tbody');
+        
+        // Funciones para mostrar/ocultar opciones según el tipo de pregunta
+        function toggleOptions() {
+            const questionType = questionTypeSelect.options[questionTypeSelect.selectedIndex].text;
+            
+            // Mostrar/ocultar opciones de preguntas numéricas
+            if (questionType === 'NUMBER' || questionType === 'RATING') {
+                numericOptions.style.display = 'flex';
+            } else {
+                numericOptions.style.display = 'none';
+            }
+            
+            // Mostrar/ocultar opciones de selección
+            if (questionType === 'SINGLE_CHOICE' || questionType === 'MULTIPLE_CHOICE' || questionType === 'RATING' || questionType === 'YES_NO') {
+                choicesContainer.style.display = 'block';
+            } else {
+                choicesContainer.style.display = 'none';
+            }
+            
+            // Para YES/NO, precargar opciones Sí/No si no hay opciones
+            if (questionType === 'YES_NO' && choicesTable.querySelectorAll('tr.choice-form').length < 2) {
+                // Limpiar opciones existentes
+                const existingChoices = choicesTable.querySelectorAll('tr.choice-form');
+                existingChoices.forEach(choice => {
+                    choice.remove();
+                });
+                
+                // Añadir opción "Sí"
+                addChoiceRow('Sí', 'YES', 1);
+                
+                // Añadir opción "No"
+                addChoiceRow('No', 'NO', 2);
+            }
+        }
+        
+        // Evento change para el tipo de pregunta
+        questionTypeSelect.addEventListener('change', toggleOptions);
+        
+        // Inicializar estado
+        toggleOptions();
+        
+        // Función para agregar nueva fila de opción
+        function addChoiceRow(text = '', value = '', order = '') {
+            const totalForms = document.getElementById('id_choices-TOTAL_FORMS');
+            const currentForms = parseInt(totalForms.value);
+            
+            // Clonar la primera fila como plantilla
+            let newRow;
+            if (choicesTable.querySelector('tr.choice-form')) {
+                newRow = choicesTable.querySelector('tr.choice-form').cloneNode(true);
+            } else {
+                newRow = document.createElement('tr');
+                newRow.className = 'choice-form';
+                newRow.innerHTML = `
+                    <td><input type="text" class="form-control" name="choices-${currentForms}-text" id="id_choices-${currentForms}-text"></td>
+                    <td><input type="text" class="form-control" name="choices-${currentForms}-value" id="id_choices-${currentForms}-value"></td>
+                    <td><input type="number" class="form-control" name="choices-${currentForms}-order" id="id_choices-${currentForms}-order"></td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-danger remove-choice">
+                            <i class="fas fa-times"></i>

@@ -1,0 +1,142 @@
+{% extends "surveys/base.html" %}
+{% load i18n %}
+{% load static %}
+{% load custom_filters %}
+
+{% block page_title %}{{ question.text }} - {% trans "Elementos de Jerarquía" %}{% endblock %}
+
+{% block header %}{{ question.text }} - {% trans "Elementos de Jerarquía" %}{% endblock %}
+
+{% block extra_css %}
+<!-- Añadir estilos para la lista ordenable -->
+<link rel="stylesheet" href="{% static 'assets/css/sortable-list.css' %}">
+{% endblock %}
+
+{% block page_content %}
+<!-- Cabecera -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'encuestas:survey_list' %}">{% trans "Encuestas" %}</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'encuestas:survey_detail' survey.id %}">{{ survey.title }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{% trans "Elementos de Jerarquía" %}</li>
+            </ol>
+        </nav>
+        <h2>{% trans "Elementos de Jerarquía" %}</h2>
+        <p class="text-muted">{% trans "Gestiona los elementos para la pregunta de jerarquía" %}: <strong>{{ question.text }}</strong></p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-primary addItemBtn" id="addItemBtn">
+            <i class="bi bi-plus-circle"></i> {% trans "Añadir Elemento" %}
+        </button>
+        <!-- El boton debe regresar a la pag anterior -->
+        <button type="button" class="btn btn-secondary" onclick="window.history.back();"> 
+            <i class="bi bi-arrow-left">{% trans " Regresar a la encuesta" %}</i>
+        </button>
+    </div>
+</div>
+
+<!-- Lista de Elementos -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">{% trans "Estructura de la jerarquía" %}</h5>
+    </div>
+    <div class="card-body">
+        {% if items %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th width="5%">#</th>
+                            <th width="60%">{% trans "Texto" %}</th>
+                            <th width="15%">{% trans "Posición por Defecto" %}</th>
+                            <th width="20%" class="text-end">{% trans "Acciones" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="items-list" class="sortable">
+                        {% for item in items %}
+                        <tr id="item-{{ item.id }}" data-id="{{ item.id }}">
+                            <td class="handle"><i class="bi bi-grip-vertical text-muted"></i> {{ item.order }}</td>
+                            <td>
+                                <strong>{{ item.text }}</strong>
+                                {% if item.help_text %}
+                                    <p class="text-muted small mb-0">{{ item.help_text }}</p>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.default_position }}</td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-primary edit-item" 
+                                            data-item-id="{{ item.id }}">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger delete-item" 
+                                            data-item-id="{{ item.id }}">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <div class="mb-3">
+                    <i class="bi bi-diagram-3 text-muted" style="font-size: 3rem;"></i>
+                </div>
+                <h3>{% trans "No hay elementos añadidos todavía" %}</h3>
+                <p class="text-muted">{% trans "Comienza añadiendo elementos para ordenar." %}</p>
+                <button type="button" class="btn btn-primary mt-2 addItemBtn" id="addItemBtn">
+                    <i class="bi bi-plus-circle"></i> {% trans "Añadir Tu Primer Elemento" %}
+                </button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">{% trans "Acerca de las Preguntas de Jerarquía" %}</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6><i class="bi bi-info-circle me-2"></i> {% trans "Cómo funciona" %}</h6>
+                <p>{% trans "Las preguntas de jerarquía permiten a los encuestados clasificar u ordenar elementos según preferencia, importancia o cualquier otro criterio." %}</p>
+                <p>{% trans "Puedes crear una estructura jerárquica con relaciones padre-hijo, o una simple lista plana para tareas básicas de ordenamiento." %}</p>
+            </div>
+            <div class="col-md-6">
+                <h6><i class="bi bi-lightbulb me-2"></i> {% trans "Consejos" %}</h6>
+                <ul>
+                    <li>{% trans "Mantén el texto de los elementos corto y claro para una mejor experiencia del usuario." %}</li>
+                    <li>{% trans "Utiliza el campo de descripción para proporcionar contexto adicional si es necesario." %}</li>
+                    <li>{% trans "Puedes arrastrar y soltar elementos para reordenarlos directamente en esta vista." %}</li>
+                    <li>{% trans "Añade elementos hijos para crear jerarquías multinivel." %}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'assets/js/surveys/hierarchy_items.js' %}"></script>
+<script>
+    // Variables para URLs de API
+    const ITEM_URLS = {
+        list: "{% url 'encuestas:hierarchy_item_list' question.id %}",
+        create: "{% url 'encuestas:hierarchy_item_create' question.id %}",
+        update: function(questionId, itemId) { 
+            return `/questions/${questionId}/hierarchy-items/${itemId}/update/` 
+        },
+        delete: function(questionId, itemId) { 
+            return `/questions/${questionId}/hierarchy-items/${itemId}/delete/` 
+        },
+        reorder: "/api/questions/{{ question.id }}/hierarchy-items/reorder/"
+    };
+</script>
+
+
+{% endblock %}

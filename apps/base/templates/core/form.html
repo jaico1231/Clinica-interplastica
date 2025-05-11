@@ -1,0 +1,29 @@
+
+<!-- Contenido del modal se cargará dinámicamente -->
+<form method="post" enctype="multipart/form-data" class="create-form">
+    {% csrf_token %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header card-header-primary">
+                    <h4 class="card-title">{{ title }}</h4>
+                    <p class="card-category"></p>
+                </div>
+                <div class="card-body">
+                    <div id="message-container"></div>
+                    <table class="table">
+                        {{ form.as_p }}
+                    </table>
+                </div>
+                <div class="card-footer">
+                    <button type="submit" class="btn btn-primary btn-xs">
+                        <i class="material-icons">save</i><br>Guardar
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-xs" data-bs-dismiss="modal">
+                        <i class="material-icons">cancel</i><br>Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>

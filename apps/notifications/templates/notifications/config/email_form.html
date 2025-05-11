@@ -1,0 +1,11 @@
+{% extends "notifications/config/base_config_form.html" %}
+
+{% block title %}
+    {% if object %}Edit Email Configuration{% else %}Create Email Configuration{% endif %}
+{% endblock %}
+
+{% block content %}
+    {% with cancel_url=request.resolver_match.namespace|add:":email_config_list" %}
+        {{ block.super }}
+    {% endwith %}
+{% endblock %}

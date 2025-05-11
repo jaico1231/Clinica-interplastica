@@ -1,0 +1,45 @@
+{% load i18n %}
+
+{% if level in items_by_level %}
+    {% with current_level_items=items_by_level|get_item:level %}
+        {% with next_level=level|add:"1" %}
+            <ul class="hierarchy-level sortable-hierarchy" data-level="{{ level }}">
+                {% for item in current_level_items %}
+                    {% if item.parent_id == parent_id %}
+                        <li class="hierarchy-item" data-id="{{ item.id }}">
+                            <div class="hierarchy-item-content">
+                                <div class="item-handle"><i class="bi bi-grip-vertical"></i></div>
+                                <div class="item-text">
+                                    <strong>{{ item.text }}</strong>
+                                    {% if item.description %}
+                                        <p class="small text-muted mb-0">{{ item.description }}</p>
+                                    {% endif %}
+                                </div>
+                                <div class="item-actions">
+                                    <a href="{% url 'encuestas:hierarchy_item_create' question.id %}?parent_id={{ item.id }}" 
+                                       class="btn btn-sm btn-outline-success add-child-item" 
+                                       title="{% trans 'Add child item' %}">
+                                        <i class="bi bi-plus-circle"></i>
+                                    </a>
+                                    <a href="{% url 'encuestas:hierarchy_item_update' item.id %}" 
+                                       class="btn btn-sm btn-outline-primary edit-hierarchy-item" 
+                                       title="{% trans 'Edit item' %}">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'encuestas:hierarchy_item_delete' item.id %}" 
+                                       class="btn btn-sm btn-outline-danger delete-hierarchy-item"
+                                       title="{% trans 'Delete item' %}">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <!-- Recursive inclusion for next level -->
+                            {% include "encuestas/includes/hierarchy_items_tree.html" with level=next_level parent_id=item.id %}
+                        </li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        {% endwith %}
+    {% endwith %}
+{% endif %}

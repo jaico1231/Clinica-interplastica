@@ -1,0 +1,164 @@
+<nav class="navbar navbar-expand-lg navbar-light bg-white rounded shadow-sm">
+    <div class="container-fluid">
+        <!-- Botón de búsqueda -->
+        <div class="d-flex">
+            <div class="input-group">
+                <span class="input-group-text bg-transparent border-end-0">
+                    <i class="fas fa-search text-muted"></i>
+                </span>
+                <input type="search" class="form-control border-start-0 ps-0" 
+                       placeholder="Buscar..." aria-label="Buscar">
+            </div>
+        </div>
+        
+        <!-- Botones de acción -->
+        <div class="d-flex gap-2">
+            <!-- Botón de ayuda -->
+            <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#helpModal">
+                <i class="fas fa-question-circle"></i>
+            </button>
+            
+            <!-- Botón de notificaciones -->
+            <div class="dropdown">
+                <button class="btn position-relative" type="button" id="notificationDropdown" 
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-bell text-muted"></i>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        2
+                    </span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown">
+                    <li><h6 class="dropdown-header">Notificaciones</h6></li>
+                    <li><a class="dropdown-item" href="#">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-chart-line bg-primary bg-opacity-10 p-2 rounded-circle text-primary"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <p class="mb-0">Nuevo gráfico compartido contigo</p>
+                                <small class="text-muted">Hace 5 minutos</small>
+                            </div>
+                        </div>
+                    </a></li>
+                    <li><a class="dropdown-item" href="#">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-file-alt bg-success bg-opacity-10 p-2 rounded-circle text-success"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <p class="mb-0">Informe generado exitosamente</p>
+                                <small class="text-muted">Hace 1 hora</small>
+                            </div>
+                        </div>
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-center" href="#">Ver todas</a></li>
+                </ul>
+            </div>
+            
+            <!-- Botón perfil de usuario -->
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
+                        id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-user-circle me-1"></i>
+                    <span class="d-none d-md-inline">{{ user.username }}</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                    <li><a class="dropdown-item" href="#">
+                        <i class="fas fa-user me-2 text-muted"></i> Perfil
+                    </a></li>
+                    <li><a class="dropdown-item" href="#">
+                        <i class="fas fa-cog me-2 text-muted"></i> Configuración
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{% url 'logout' %}">
+                        <i class="fas fa-sign-out-alt me-2 text-muted"></i> Cerrar sesión
+                    </a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Modal de ayuda -->
+<div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="helpModalLabel">Ayuda</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="accordion" id="helpAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingOne">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                                ¿Cómo crear un gráfico?
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse show" 
+                             aria-labelledby="headingOne" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                <p>Para crear un nuevo gráfico, sigue estos pasos:</p>
+                                <ol>
+                                    <li>Haz clic en "Nuevo Gráfico" en el menú lateral</li>
+                                    <li>Selecciona el tipo de gráfico que deseas crear</li>
+                                    <li>Elige el modelo de datos y los campos para los ejes X e Y</li>
+                                    <li>Configura opciones adicionales como filtros y colores</li>
+                                    <li>Haz clic en "Guardar" para crear el gráfico</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingTwo">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                ¿Cómo personalizar mi dashboard?
+                            </button>
+                        </h2>
+                        <div id="collapseTwo" class="accordion-collapse collapse" 
+                             aria-labelledby="headingTwo" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                <p>Para personalizar tu dashboard:</p>
+                                <ol>
+                                    <li>Ve a la sección "Dashboards" y selecciona uno existente o crea uno nuevo</li>
+                                    <li>Haz clic en "Añadir Widget" para incluir gráficos a tu dashboard</li>
+                                    <li>Arrastra y suelta los widgets para reorganizarlos</li>
+                                    <li>Ajusta el tamaño de cada widget según tus preferencias</li>
+                                    <li>Los cambios se guardan automáticamente</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingThree">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                ¿Cómo generar informes?
+                            </button>
+                        </h2>
+                        <div id="collapseThree" class="accordion-collapse collapse" 
+                             aria-labelledby="headingThree" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                <p>Para generar un informe:</p>
+                                <ol>
+                                    <li>Ve a la sección "Informes" y selecciona "Nuevo Informe"</li>
+                                    <li>Configura los modelos de datos que deseas incluir</li>
+                                    <li>Personaliza los filtros y la configuración del informe</li>
+                                    <li>Haz clic en "Generar" para crear el informe</li>
+                                    <li>Una vez generado, puedes descargarlo en varios formatos</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <a href="#" class="btn btn-primary">Ver documentación completa</a>
+            </div>
+        </div>
+    </div>
+</div>

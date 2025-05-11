@@ -1,0 +1,161 @@
+Modelos principales:
+
+Survey: La plantilla de encuesta con su título, descripción y fechas.
+QuestionType: Define los tipos de preguntas disponibles.
+Question: Las preguntas individuales dentro de una encuesta.
+QuestionChoice: Las opciones para preguntas de selección.
+Response: Una sesión de respuesta a una encuesta completa.
+Answer: Respuestas individuales a preguntas específicas.
+AnswerChoice: Opciones seleccionadas en preguntas de opción múltiple.
+Period: Periodos de tiempo para agrupar y analizar datos.
+Indicator: Métricas calculadas en base a las respuestas.
+
+Este modelo es mucho más flexible que el original y te permitirá crear encuestas personalizadas para cualquier propósito, no solo para las encuestas de satisfacción hospitalaria como parecía estar enfocado el modelo original.
+
+Funcionalidades Principales del Sistema de Encuestas
+
+Encuestas personalizables
+
+Crear encuestas con título, descripción y fechas de vigencia
+Publicar/despublicar encuestas para controlar su visibilidad
+Organizar encuestas por períodos para análisis temporal
+
+
+Preguntas flexibles
+
+Soporte para múltiples tipos de preguntas:
+
+Texto corto y largo
+Selección única y múltiple
+Valoraciones/ratings
+Numéricas
+Sí/No
+Fechas
+
+
+Configuración de obligatoriedad
+Organización mediante orden específico
+Texto de ayuda para guiar a los usuarios
+
+
+Lógica condicional
+
+Preguntas que dependen de respuestas anteriores
+Control dinámico de visibilidad en el formulario
+
+
+Gestión de respuestas
+
+Visualización y exportación de respuestas recibidas
+Filtrado por período y otros criterios
+Asociación opcional con usuarios registrados o anónimos
+
+
+Indicadores y análisis
+
+Cálculo automático de indicadores basados en las respuestas
+Visualización mediante gráficos interactivos
+Análisis por categorías de preguntas
+
+
+Interfaz moderna y responsiva
+
+Diseñada con Bootstrap para adaptarse a dispositivos móviles
+Iconos intuitivos para mejorar la experiencia de usuario
+Validación de formularios para evitar errores
+
+
+
+Instrucciones de Uso
+Crear una nueva encuesta:
+
+Accede a "Encuestas" y haz clic en "Nueva Encuesta"
+Completa el título, descripción y fechas de vigencia
+Guarda la encuesta para pasar a agregar preguntas
+
+Añadir preguntas:
+
+En la vista de detalle de la encuesta, haz clic en "Administrar Preguntas"
+Haz clic en "Nueva Pregunta"
+Selecciona el tipo de pregunta y completa el texto
+Para preguntas con opciones, añade las opciones necesarias
+Configura el orden y si es obligatoria
+Opcionalmente, establece dependencias con otras preguntas
+
+Publicar la encuesta:
+
+Edita la encuesta desde su vista de detalle
+Marca la casilla "Publicada"
+Una vez publicada, puedes compartir el enlace con los usuarios
+
+Recopilar respuestas:
+
+Los usuarios acceden al enlace y completan el formulario
+Las respuestas se almacenan en la base de datos
+Puedes ver todas las respuestas desde la sección "Ver Respuestas"
+
+Analizar resultados:
+
+Accede al Dashboard de la encuesta
+Visualiza las estadísticas generales y los gráficos
+Calcula indicadores específicos desde la sección "Indicadores"
+Filtra los resultados por período para análisis temporales
+
+Consideraciones para Implementación
+
+Seguridad:
+
+He implementado control de permisos en todas las vistas administrativas
+Las respuestas están protegidas y solo accesibles para usuarios autorizados
+
+
+Rendimiento:
+
+La estructura de indicadores permite precalcular métricas para mejorar el rendimiento del dashboard
+Las consultas están optimizadas con índices en las tablas principales
+
+
+Despliegue:
+
+Asegúrate de configurar correctamente los archivos estáticos en producción
+Para grandes volúmenes de respuestas, considera implementar paginación adicional
+
+
+Extensibilidad:
+
+El sistema está diseñado para ser fácilmente ampliable
+Puedes añadir nuevos tipos de preguntas modificando el modelo QuestionType
+Para funcionalidades adicionales de análisis, puedes expandir el modelo Indicator
+
+
+
+Mejoras Futuras Posibles
+
+Exportación de datos:
+
+Añadir funcionalidad para exportar respuestas a CSV/Excel
+Generar informes en PDF con gráficos y análisis
+
+
+Plantillas de preguntas:
+
+Implementar un sistema para reutilizar preguntas comunes entre encuestas
+Crear encuestas a partir de plantillas predefinidas
+
+
+Notificaciones:
+
+Enviar correos automáticos cuando se reciben nuevas respuestas
+Alertas para encuestas próximas a vencer
+
+
+Integración API:
+
+Crear endpoints REST para integrar con otros sistemas
+Webhooks para notificar eventos a sistemas externos
+
+
+Análisis avanzado:
+
+Implementar funciones estadísticas más avanzadas
+Comparativas entre diferentes períodos

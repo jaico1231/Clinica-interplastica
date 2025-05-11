@@ -1,0 +1,118 @@
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plan Único de Cuentas (PUC)</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" type="module"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <script>
+    window.models = [
+      {
+        name: "GrupoCuenta",
+        fields: [
+          { name: "code", label: "Código", type: "text" },
+          { name: "name", label: "Nombre", type: "text" },
+          { name: "level", label: "Nivel", type: "number" },
+          { name: "naturaleza", label: "Naturaleza", type: "text" },
+          { name: "description", label: "Descripción", type: "textarea" }
+        ]
+      },
+      {
+        name: "CuentaMayor",
+        fields: [
+          { name: "code", label: "Código", type: "text" },
+          { name: "name", label: "Nombre", type: "text" },
+          { name: "level", label: "Nivel", type: "number" },
+          { name: "naturaleza", label: "Naturaleza", type: "text" },
+          { name: "grupo", label: "Grupo", type: "text" },
+          { name: "description", label: "Descripción", type: "textarea" }
+        ]
+      },
+      {
+        name: "SubCuenta",
+        fields: [
+          { name: "code", label: "Código", type: "text" },
+          { name: "name", label: "Nombre", type: "text" },
+          { name: "level", label: "Nivel", type: "number" },
+          { name: "naturaleza", label: "Naturaleza", type: "text" },
+          { name: "cuenta_mayor", label: "Cuenta Mayor", type: "text" },
+          { name: "description", label: "Descripción", type: "textarea" }
+        ]
+      },
+      {
+        name: "CuentaDetalle",
+        fields: [
+          { name: "code", label: "Código", type: "text" },
+          { name: "name", label: "Nombre", type: "text" },
+          { name: "level", label: "Nivel", type: "number" },
+          { name: "naturaleza", label: "Naturaleza", type: "text" },
+          { name: "subcuenta", label: "Subcuenta", type: "text" },
+          { name: "description", label: "Descripción", type: "textarea" },
+          { name: "is_tax_account", label: "Es cuenta fiscal", type: "checkbox" }
+        ]
+      },
+      {
+        name: "CuentaAuxiliar",
+        fields: [
+          { name: "code", label: "Código", type: "text" },
+          { name: "name", label: "Nombre", type: "text" },
+          { name: "level", label: "Nivel", type: "number" },
+          { name: "naturaleza", label: "Naturaleza", type: "text" },
+          { name: "cuenta_detalle", label: "Cuenta Detalle", type: "text" },
+          { name: "description", label: "Descripción", type: "textarea" }
+        ]
+      }
+    ];
+  </script>
+</head>
+
+<body>
+  <header>
+    <h1>Plan Único de Cuentas (PUC)</h1>
+  </header>
+
+  <main>
+    <section id="model-selector">
+      <h2>Seleccione un Modelo</h2>
+      <select id="model-dropdown">
+        <option value="">-- Seleccione --</option>
+        <option value="GrupoCuenta">Grupo de Cuenta</option>
+        <option value="CuentaMayor">Cuenta Mayor</option>
+        <option value="SubCuenta">Subcuenta</option>
+        <option value="CuentaDetalle">Cuenta Detalle</option>
+        <option value="CuentaAuxiliar">Cuenta Auxiliar</option>
+      </select>
+    </section>
+
+    <section id="form-container">
+      <h2>Agregar un nuevo registro</h2>
+      <form id="data-form">
+      </form>
+    </section>
+
+    <section id="data-display">
+      <h2>Registros</h2>
+      <table id="data-table">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Nombre</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Aquí se agregarán las filas dinámicamente -->
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <footer>
+    <p> 2024 PUC Template</p>
+  </footer>
+</body>
+
+</html>

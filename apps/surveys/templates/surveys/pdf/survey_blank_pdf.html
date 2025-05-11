@@ -1,0 +1,98 @@
+<!-- surveys/pdf/survey_blank_pdf.html -->
+{% extends "surveys/pdf/pdf_base.html" %}
+
+{% block content %}
+<div class="respondent-info">
+    <h3>Información del Encuestado</h3>
+    <table class="table">
+        <tr>
+            <td style="width: 30%;"><strong>Nombre:</strong></td>
+            <td style="width: 70%;">_______________________________________</td>
+        </tr>
+        <tr>
+            <td><strong>Email:</strong></td>
+            <td>_______________________________________</td>
+        </tr>
+        <tr>
+            <td><strong>Fecha:</strong></td>
+            <td>_______________________________________</td>
+        </tr>
+    </table>
+</div>
+
+<h3>Preguntas</h3>
+
+{% for question in questions %}
+<div class="question-container">
+    <div class="question-text">{{ forloop.counter }}. {{ question.text }}{% if question.is_required %} *{% endif %}</div>
+    {% if question.description %}
+    <div class="question-description">{{ question.description }}</div>
+    {% endif %}
+    
+    {% with qtype=question.question_type.name %}
+    
+    {% if qtype == 'TEXT' %}
+    <div class="answer-field" style="height: 30px;"></div>
+    
+    {% elif qtype == 'TEXT_AREA' %}
+    <div class="answer-field" style="height: 100px;"></div>
+    
+    {% elif qtype == 'NUMBER' %}
+    <div class="answer-field" style="height: 30px;"></div>
+    
+    {% elif qtype == 'DATE' %}
+    <div class="answer-field" style="height: 30px;"></div>
+    
+    {% elif qtype == 'YES_NO' %}
+    <div class="choices">
+        <div class="choice-item">
+            <div class="checkbox"></div>
+            <div class="choice-text">Sí</div>
+        </div>
+        <div class="choice-item">
+            <div class="checkbox"></div>
+            <div class="choice-text">No</div>
+        </div>
+    </div>
+    
+    {% elif qtype == 'SINGLE_CHOICE' %}
+    <div class="choices">
+        {% for choice in question.choices.all %}
+        <div class="choice-item">
+            <div class="checkbox"></div>
+            <div class="choice-text">{{ choice.text }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% elif qtype == 'MULTIPLE_CHOICE' %}
+    <div class="choices">
+        {% for choice in question.choices.all %}
+        <div class="choice-item">
+            <div class="checkbox"></div>
+            <div class="choice-text">{{ choice.text }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% elif qtype == 'RATING' %}
+    <div class="choices">
+        {% for choice in question.choices.all %}
+        <div class="choice-item">
+            <div class="checkbox"></div>
+            <div class="choice-text">{{ choice.text }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% endif %}
+    
+    {% endwith %}
+</div>
+{% endfor %}
+
+<div class="footer-note">
+    <p>* Pregunta obligatoria</p>
+    <p>Por favor complete todas las preguntas obligatorias.</p>
+</div>
+{% endblock %}

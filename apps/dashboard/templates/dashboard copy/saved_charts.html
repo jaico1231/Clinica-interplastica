@@ -1,0 +1,377 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+{% load i18n %}
+{% load custom_filters %}
+{% block page_title %}{% trans 'Gráficos guardados' %}{% endblock %}
+
+{% block page_actions %}
+    <form class="d-flex me-2" method="get" action="{% url 'dashboard:chart_list' %}">
+        <div class="input-group">
+            <input type="text" class="form-control form-control-sm" placeholder="{% trans 'Buscar...' %}" name="q" value="{{ search_query }}">
+            <button class="btn btn-sm btn-outline-secondary" type="submit">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </form>
+    <a href="{% url 'dashboard:chart_builder' %}" class="btn btn-sm btn-primary">
+        <i class="fas fa-plus"></i> {% trans 'Crear gráfico' %}
+    </a>
+{% endblock %}
+
+{% block dashboard_content %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">{% trans 'Mis gráficos' %}</h5>
+                </div>
+                <div class="card-body">
+                    {% if charts %}
+                        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                            {% for chart in charts %}
+                                <div class="col">
+                                    <div class="card h-100 chart-card">
+                                        <div class="card-header">
+                                            <h5 class="card-title mb-0">{{ chart.title }}</h5>
+                                        </div>
+                                        <div class="chart-card-thumb">
+                                            {% if chart.chart_type.icon_class %}
+                                                <i class="fas {{ chart.chart_type.icon_class }} fa-4x text-primary"></i>
+                                            {% else %}
+                                                <i class="fas fa-chart-bar fa-4x text-primary"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div class="card-body">
+                                            {% if chart.description %}
+                                                <p class="card-text">{{ chart.description|truncatechars:100 }}</p>
+                                            {% else %}
+                                                <p class="card-text text-muted">{% trans 'Sin descripción' %}</p>
+                                            {% endif %}
+                                            <div class="mb-2">
+                                                <span class="badge bg-primary">{{ chart.chart_type.name }}</span>
+                                                <small class="text-muted">{{ chart.model_content_type }}</small>
+                                            </div>
+                                            <small class="text-muted">
+                                                {% trans 'Creado' %}: {{ chart.created_at|date:"d/m/Y H:i" }}
+                                            </small>
+                                        </div>
+                                        <div class="chart-card-actions">
+                                            <div class="btn-group w-100">
+                                                <a href="{% url 'dashboard:chart_detail' chart.id %}" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-eye"></i> {% trans 'Ver' %}
+                                                </a>
+                                                <a href="{% url 'dashboard:chart_edit' chart.id %}" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-edit"></i> {% trans 'Editar' %}
+                                                </a>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <li>
+                                                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#addToDashboardModal" data-chart-id="{{ chart.id }}" data-chart-title="{{ chart.title }}">
+                                                            <i class="fas fa-plus"></i> {% trans 'Agregar a dashboard' %}
+                                                        </a>
+                                                    </li>
+                                                    {% if chart.is_favorite %}
+                                                        <li>
+                                                            <a class="dropdown-item" href="#" onclick="toggleFavorite({{ chart.id }}, false)">
+                                                                <i class="fas fa-star"></i> {% trans 'Quitar de favoritos' %}
+                                                            </a>
+                                                        </li>
+                                                    {% else %}
+                                                        <li>
+                                                            <a class="dropdown-item" href="#" onclick="toggleFavorite({{ chart.id }}, true)">
+                                                                <i class="far fa-star"></i> {% trans 'Marcar como favorito' %}
+                                                            </a>
+                                                        </li>
+                                                    {% endif %}
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteChartModal" data-chart-id="{{ chart.id }}" data-chart-title="{{ chart.title }}">
+                                                            <i class="fas fa-trash"></i> {% trans 'Eliminar' %}
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if is_paginated %}
+                            <nav aria-label="{% trans 'Paginación de gráficos' %}" class="mt-4">
+                                <ul class="pagination justify-content-center">
+                                    {% if page_obj.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page=1{% if search_query %}&q={{ search_query }}{% endif %}">
+                                                <i class="fas fa-angle-double-left"></i>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}">
+                                                <i class="fas fa-angle-left"></i>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                    
+                                    {% for num in page_obj.paginator.page_range %}
+                                        {% if page_obj.number == num %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ num }}</span>
+                                            </li>
+                                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ num }}{% if search_query %}&q={{ search_query }}{% endif %}">{{ num }}</a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                    
+                                    {% if page_obj.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}">
+                                                <i class="fas fa-angle-right"></i>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&q={{ search_query }}{% endif %}">
+                                                <i class="fas fa-angle-double-right"></i>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        {% endif %}
+                        
+                    {% else %}
+                        <div class="text-center py-5">
+                            <div class="empty-state">
+                                <i class="fas fa-chart-bar fa-5x text-muted mb-3"></i>
+                                {% if search_query %}
+                                    <h3>{% trans 'No se encontraron gráficos' %}</h3>
+                                    <p class="text-muted">{% trans 'No hay gráficos que coincidan con tu búsqueda.' %}</p>
+                                    <a href="{% url 'dashboard:chart_list' %}" class="btn btn-outline-primary mt-3">
+                                        <i class="fas fa-list"></i> {% trans 'Ver todos los gráficos' %}
+                                    </a>
+                                {% else %}
+                                    <h3>{% trans 'No hay gráficos guardados' %}</h3>
+                                    <p class="text-muted">{% trans 'Comienza creando tu primer gráfico.' %}</p>
+                                {% endif %}
+                                <a href="{% url 'dashboard:chart_builder' %}" class="btn btn-primary mt-3">
+                                    <i class="fas fa-plus"></i> {% trans 'Crear gráfico' %}
+                                </a>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sección de gráficos favoritos -->
+    {% if charts|dictsort:"is_favorite"|last|get_item:"is_favorite" %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">{% trans 'Favoritos' %}</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                            {% for chart in charts %}
+                                {% if chart.is_favorite %}
+                                    <div class="col">
+                                        <div class="card h-100 chart-card">
+                                            <div class="card-header">
+                                                <h5 class="card-title mb-0">
+                                                    <i class="fas fa-star text-warning"></i> {{ chart.title }}
+                                                </h5>
+                                            </div>
+                                            <div class="chart-card-thumb">
+                                                {% if chart.chart_type.icon_class %}
+                                                    <i class="fas {{ chart.chart_type.icon_class }} fa-4x text-warning"></i>
+                                                {% else %}
+                                                    <i class="fas fa-chart-bar fa-4x text-warning"></i>
+                                                {% endif %}
+                                            </div>
+                                            <div class="card-body">
+                                                {% if chart.description %}
+                                                    <p class="card-text">{{ chart.description|truncatechars:100 }}</p>
+                                                {% else %}
+                                                    <p class="card-text text-muted">{% trans 'Sin descripción' %}</p>
+                                                {% endif %}
+                                                <div class="mb-2">
+                                                    <span class="badge bg-primary">{{ chart.chart_type.name }}</span>
+                                                    <small class="text-muted">{{ chart.model_content_type }}</small>
+                                                </div>
+                                                <small class="text-muted">
+                                                    {% trans 'Creado' %}: {{ chart.created_at|date:"d/m/Y H:i" }}
+                                                </small>
+                                            </div>
+                                            <div class="chart-card-actions">
+                                                <div class="btn-group w-100">
+                                                    <a href="{% url 'dashboard:chart_detail' chart.id %}" class="btn btn-sm btn-warning">
+                                                        <i class="fas fa-eye"></i> {% trans 'Ver' %}
+                                                    </a>
+                                                    <a href="{% url 'dashboard:chart_edit' chart.id %}" class="btn btn-sm btn-outline-warning">
+                                                        <i class="fas fa-edit"></i> {% trans 'Editar' %}
+                                                    </a>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="fas fa-ellipsis-v"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li>
+                                                            <a class="dropdown-item" href="#" onclick="toggleFavorite({{ chart.id }}, false)">
+                                                                <i class="fas fa-star"></i> {% trans 'Quitar de favoritos' %}
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block dashboard_js %}
+<!-- Modal para agregar gráfico a dashboard -->
+<div class="modal fade" id="addToDashboardModal" tabindex="-1" aria-labelledby="addToDashboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addToDashboardModalLabel">{% trans 'Agregar a dashboard' %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="addToDashboardForm" method="post" action="{% url 'dashboard:add_chart_to_dashboard' %}">
+                {% csrf_token %}
+                <input type="hidden" id="chartIdInput" name="chart_id">
+                <div class="modal-body">
+                    <p>{% trans 'Selecciona el dashboard al que deseas agregar este gráfico:' %}</p>
+                    <div class="mb-3">
+                        <select class="form-select" id="dashboardSelect" name="dashboard_id" required>
+                            <option value="">{% trans 'Seleccionar dashboard...' %}</option>
+                            {% for dashboard in dashboards %}
+                                <option value="{{ dashboard.id }}">{{ dashboard.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% if not dashboards %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> {% trans 'No tienes dashboards creados.' %}
+                            <a href="#" data-bs-toggle="modal" data-bs-target="#newDashboardModal">{% trans 'Crear uno nuevo' %}</a>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans 'Cancelar' %}</button>
+                    <button type="submit" class="btn btn-primary" {% if not dashboards %}disabled{% endif %}>
+                        <i class="fas fa-plus"></i> {% trans 'Agregar' %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para eliminar gráfico -->
+<div class="modal fade" id="deleteChartModal" tabindex="-1" aria-labelledby="deleteChartModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteChartModalLabel">{% trans 'Confirmar eliminación' %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>{% trans '¿Estás seguro de que deseas eliminar este gráfico?' %}</p>
+                <p class="fw-bold" id="deleteChartName"></p>
+                <p>{% trans 'Esta acción no se puede deshacer.' %}</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans 'Cancelar' %}</button>
+                <form id="deleteChartForm" method="post" action="{% url 'dashboard:delete_chart' 0 %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> {% trans 'Eliminar' %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar select2 si está disponible
+        if (typeof $.fn.select2 !== 'undefined') {
+            $('#dashboardSelect').select2({
+                dropdownParent: $('#addToDashboardModal'),
+                width: '100%',
+                placeholder: '{% trans "Seleccionar dashboard..." %}'
+            });
+        }
+        
+        // Evento para modal de agregar a dashboard
+        const addToDashboardModal = document.getElementById('addToDashboardModal');
+        addToDashboardModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const chartId = button.getAttribute('data-chart-id');
+            const chartTitle = button.getAttribute('data-chart-title');
+            
+            document.getElementById('chartIdInput').value = chartId;
+            document.getElementById('addToDashboardModalLabel').textContent = `Agregar "${chartTitle}" a dashboard`;
+        });
+        
+        // Evento para modal de eliminar gráfico
+        const deleteChartModal = document.getElementById('deleteChartModal');
+        deleteChartModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const chartId = button.getAttribute('data-chart-id');
+            const chartTitle = button.getAttribute('data-chart-title');
+            
+            document.getElementById('deleteChartName').textContent = chartTitle;
+            const form = document.getElementById('deleteChartForm');
+            form.action = form.action.replace('0', chartId);
+        });
+    });
+    
+    /**
+     * Marca o desmarca un gráfico como favorito
+     * @param {number} chartId - ID del gráfico
+     * @param {boolean} isFavorite - Si debe marcarse como favorito
+     */
+    async function toggleFavorite(chartId, isFavorite) {
+        try {
+            const response = await fetch(`{% url 'dashboard:toggle_chart_favorite' %}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value
+                },
+                body: JSON.stringify({
+                    chart_id: chartId,
+                    is_favorite: isFavorite
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Recargar la página para reflejar los cambios
+                window.location.reload();
+            } else {
+                alert(`Error: ${data.message}`);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error al actualizar el estado de favorito');
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,708 @@
+{% load static %}
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ survey.title }}</title>
+    <link rel="stylesheet" href="{% static 'surveys/css/style.css' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            max-width: 800px;
+        }
+
+        .card {
+            margin-bottom: 1.5rem;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+
+        .card-header {
+            background-color: #e9ecef;
+            font-weight: bold;
+            padding: 0.75rem 1.25rem;
+        }
+
+        .card-body {
+            padding: 1.25rem;
+        }
+
+        .question-card {
+            margin-bottom: 1rem;
+        }
+
+        .question-title {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .question-required {
+            color: #dc3545;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-left: 5px;
+            vertical-align: super;
+        }
+
+        .form-check-label {
+            margin-left: 0.25rem;
+        }
+
+        #pagination-controls span {
+            font-weight: bold;
+        }
+
+        label.form-label.me-2.mb-0 {
+            white-space: nowrap;
+        }
+
+        .card-body.d-flex.align-items-center > label {
+            margin-right: 0.5rem !important;
+        }
+        .card-body.d-flex.align-items-center > select {
+            margin-right: 0.5rem !important;
+        }
+
+        h1 {
+            margin-bottom: 0.1rem;
+        }
+
+        h1 + p {
+            color: #6c757d;
+            margin-bottom: 1.5rem;
+        }
+    </style>    
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>{{ survey.title }}</h1>
+        <div class="card mb-4">
+            <!-- Respondent Information Section -->
+            <div class="card mb-4 respondent-section">
+                <div class="card-header">
+                    {% trans 'Datos Personales' %}
+                </div>
+                <div class="card-body">
+                    {% if is_authenticated %}
+                        <!-- Logged-in user information display -->
+                        <div class="respondent-info mb-3">
+                            <p class="mb-1"><strong>{% trans 'Responding as:' %}</strong> {{ user_full_name }}</p>
+                            <p class="mb-0"><strong>{% trans 'Email:' %}</strong> {{ user_email }}</p>
+                            
+                            <!-- Hidden fields to include in form submission -->
+                            <input type="hidden" name="respondent_name" value="{{ user_full_name }}">
+                            <input type="hidden" name="respondent_email" value="{{ user_email }}">
+                        </div>
+                        
+                        <!-- Option to respond on behalf of someone else -->
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="respond-for-other" name="respond_for_other">
+                            <label class="form-check-label" for="respond-for-other">
+                                {% trans 'I am completing this survey on behalf of someone else' %}
+                            </label>
+                        </div>
+                        
+                        <!-- Respondent fields (initially hidden) -->
+                        <div id="other-respondent-fields" style="display: none;">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="other-respondent-name" class="form-label">{% trans 'Respondent Name' %}</label>
+                                    <input type="text" class="form-control" id="other-respondent-name" name="respondent_name_other">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="other-respondent-email" class="form-label">{% trans 'Respondent Email' %} ({% trans 'optional' %})</label>
+                                    <input type="email" class="form-control" id="other-respondent-email" name="respondent_email_other">
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <!-- Anonymous user information form -->
+                        <p class="mb-3">{% trans 'Please provide your information to continue with the survey:' %}</p>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="respondent-name" class="form-label">{% trans 'Your Name' %}*</label>
+                                <input type="text" class="form-control" id="respondent-name" name="respondent_name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="respondent-email" class="form-label">{% trans 'Your Email' %} ({% trans 'optional' %})</label>
+                                <input type="email" class="form-control" id="respondent-email" name="respondent_email">
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            <!-- Estadisticas -->
+            <div class="card-header">
+                {% trans 'Estadisticas' %}
+            </div>
+            
+            <!-- Survey date information -->
+            <div class="survey-dates mb-2">
+                <p class="text-muted">
+                    {% if survey.start_date and survey.end_date %}
+                        {% trans 'Available from' %} {{ survey.start_date|date:"d/m/Y" }} {% trans 'to' %} {{ survey.end_date|date:"d/m/Y" }}
+                    {% elif survey.start_date %}
+                        {% trans 'Available from' %} {{ survey.start_date|date:"d/m/Y" }}
+                    {% elif survey.end_date %}
+                        {% trans 'Available until' %} {{ survey.end_date|date:"d/m/Y" }}
+                    {% endif %}
+                </p>
+            </div>
+            
+            <!-- Questions per page selector -->
+            <div class="card-body d-flex align-items-center">
+                <label for="questions-per-page" class="form-label me-2 mb-0">{% trans 'Questions per page:' %}</label>
+                <select id="questions-per-page" class="form-select form-select-sm me-2" style="width: auto;">
+                    <option value="1">1</option>
+                    <option value="3">3</option>
+                    <option value="5" selected>5</option>
+                    <option value="10">10</option>
+                    <option value="all">{% trans 'All' %}</option>
+                </select>
+            </div>
+            
+            <!-- Progress bar -->
+            <div class="progress mb-3" style="height: 25px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                     role="progressbar" 
+                     style="width: {{ progress_percentage|default:0 }}%;" 
+                     aria-valuenow="{{ progress_percentage|default:0 }}" 
+                     aria-valuemin="0" 
+                     aria-valuemax="100">
+                    {{ progress_percentage|default:0 }}%
+                </div>
+            </div>
+            
+            <!-- Progress information -->
+            <div class="d-flex justify-content-between px-3 mb-3">
+                <span class="badge bg-primary">
+                    {% trans 'Total:' %} <span id="total-questions">{{ questions_total|default:0 }}</span>
+                </span>
+                <span class="badge bg-success">
+                    {% trans 'Answered:' %} <span id="answered-questions">{{ questions_answered|default:0 }}</span> / <span id="total-questions2">{{ questions_total|default:0 }}</span>
+                </span>
+                <span class="badge bg-info">
+                    {% trans 'Page:' %} <span id="current-page-info">{{ current_page|default:1 }}</span> / <span id="total-pages-info">{{ total_pages|default:1 }}</span>
+                </span>
+            </div>
+        </div>
+
+        <form id="survey-form" method="post" action="{% url 'encuestas:survey_respond' survey.id %}">
+            {% csrf_token %}
+            <div id="questions-container">
+                <!-- Questions will be loaded dynamically by JavaScript -->
+            </div>
+
+            <div id="pagination-controls" class="d-flex justify-content-between align-items-center mt-4 mb-4">
+                <button type="button" id="prev-btn" class="btn btn-secondary" disabled>{% trans 'Previous' %}</button>
+                <span id="page-info">{% trans 'Page' %} 1 {% trans 'of' %} 1</span>
+                <button type="button" id="next-btn" class="btn btn-primary">{% trans 'Next' %}</button>
+            </div>
+
+            <div class="text-end">
+                <button type="submit" class="btn btn-success">{% trans 'Submit Survey' %}</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+    // Load question data from the Django template context
+    const questions = [
+        {% for question in questions %}
+            {
+                id: "{{ question.id }}",
+                text: "{{ question.text|escapejs }}",
+                order: {{ question.order }},
+                required: {% if question.is_required %}true{% else %}false{% endif %},
+                type: "{{ question.question_type.name|lower }}",
+                helpText: "{{ question.help_text|default:""|escapejs }}",
+                {% if question.dependent_on %}
+                dependentOn: "{{ question.dependent_on.id }}",
+                dependentValue: "{{ question.dependent_value|escapejs }}",
+                {% endif %}
+                {% if question.min_value is not None %}minValue: {{ question.min_value }},{% endif %}
+                {% if question.max_value is not None %}maxValue: {{ question.max_value }},{% endif %}
+                options: [
+                    {% if question.question_type.name in 'SINGLE_CHOICE,MULTIPLE_CHOICE,RATING,YES_NO' %}
+                        {% for choice in question.choices.all %}
+                            {
+                                id: "{{ choice.id }}",
+                                text: "{{ choice.text|escapejs }}",
+                                value: "{{ choice.value|escapejs }}"
+                            }{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    {% endif %}
+                ]
+            }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    // --- State Variables ---
+    let currentPage = 1;
+    let itemsPerPage = 5; // Default value from the select dropdown
+    const totalQuestions = questions.length;
+    let answeredQuestions = 0;
+
+    // --- DOM Elements ---
+    const questionsContainer = document.getElementById('questions-container');
+    const questionsPerPageSelect = document.getElementById('questions-per-page');
+    const prevButton = document.getElementById('prev-btn');
+    const nextButton = document.getElementById('next-btn');
+    const pageInfoSpan = document.getElementById('page-info');
+    const surveyForm = document.getElementById('survey-form');
+    const totalQuestionsSpan = document.getElementById('total-questions');
+    const totalQuestionsSpan2 = document.getElementById('total-questions2');
+    const answeredQuestionsSpan = document.getElementById('answered-questions');
+    const currentPageSpan = document.getElementById('current-page-info');
+    const totalPagesSpan = document.getElementById('total-pages-info');
+
+    // --- Functions ---
+    function renderQuestion(question) {
+        const card = document.createElement('div');
+        card.className = 'card question-card mb-3';
+        card.dataset.questionId = question.id;
+        
+        // Handle conditional display based on dependent questions
+        if (question.dependentOn) {
+            card.dataset.dependentOn = question.dependentOn;
+            card.dataset.dependentValue = question.dependentValue;
+            card.style.display = 'none'; // Initially hidden
+        }
+
+        const cardHeader = document.createElement('div');
+        cardHeader.className = 'card-header';
+        
+        const questionTitle = document.createElement('h5');
+        questionTitle.innerHTML = `${question.order}. ${question.text}`;
+        cardHeader.appendChild(questionTitle);
+        
+        if (question.helpText) {
+            const helpText = document.createElement('small');
+            helpText.className = 'text-muted d-block mt-1';
+            helpText.textContent = question.helpText;
+            cardHeader.appendChild(helpText);
+        }
+        
+        if (question.required) {
+            const requiredBadge = document.createElement('span');
+            requiredBadge.className = 'badge bg-danger ms-2';
+            requiredBadge.textContent = '{% trans "Required" %}';
+            cardHeader.appendChild(requiredBadge);
+        }
+
+        card.appendChild(cardHeader);
+
+        const cardBody = document.createElement('div');
+        cardBody.className = 'card-body';
+
+        // Render appropriate input based on question type
+        switch(question.type.toLowerCase()) {
+            case 'text':
+            case 'text_area':
+                if (question.type.toLowerCase() === 'text') {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'form-control';
+                    input.name = question.id;
+                    input.id = `question_${question.id}`;
+                    input.required = question.required;
+                    input.placeholder = '{% trans "Short answer" %}';
+                    cardBody.appendChild(input);
+                } else {
+                    const textarea = document.createElement('textarea');
+                    textarea.className = 'form-control';
+                    textarea.name = question.id;
+                    textarea.id = `question_${question.id}`;
+                    textarea.required = question.required;
+                    textarea.rows = 3;
+                    textarea.placeholder = '{% trans "Detailed answer" %}';
+                    cardBody.appendChild(textarea);
+                }
+                break;
+                
+            case 'single_choice':
+                const singleChoiceContainer = document.createElement('div');
+                singleChoiceContainer.className = 'options-container';
+                
+                question.options.forEach((option, index) => {
+                    const formCheck = document.createElement('div');
+                    formCheck.className = 'form-check';
+                    
+                    const radioInput = document.createElement('input');
+                    radioInput.className = 'form-check-input';
+                    radioInput.type = 'radio';
+                    radioInput.name = question.id;
+                    radioInput.id = `choice_${option.id}`;
+                    radioInput.value = option.value;
+                    radioInput.required = question.required;
+                    
+                    const label = document.createElement('label');
+                    label.className = 'form-check-label';
+                    label.htmlFor = `choice_${option.id}`;
+                    label.textContent = option.text;
+                    
+                    formCheck.appendChild(radioInput);
+                    formCheck.appendChild(label);
+                    singleChoiceContainer.appendChild(formCheck);
+                });
+                
+                cardBody.appendChild(singleChoiceContainer);
+                break;
+                
+            case 'multiple_choice':
+                const multipleChoiceContainer = document.createElement('div');
+                multipleChoiceContainer.className = 'options-container';
+                
+                question.options.forEach((option, index) => {
+                    const formCheck = document.createElement('div');
+                    formCheck.className = 'form-check';
+                    
+                    const checkboxInput = document.createElement('input');
+                    checkboxInput.className = 'form-check-input';
+                    checkboxInput.type = 'checkbox';
+                    checkboxInput.name = `${question.id}`;
+                    checkboxInput.id = `choice_${option.id}`;
+                    checkboxInput.value = option.value;
+                    
+                    const label = document.createElement('label');
+                    label.className = 'form-check-label';
+                    label.htmlFor = `choice_${option.id}`;
+                    label.textContent = option.text;
+                    
+                    formCheck.appendChild(checkboxInput);
+                    formCheck.appendChild(label);
+                    multipleChoiceContainer.appendChild(formCheck);
+                });
+                
+                // Add hidden field for required validation
+                if (question.required) {
+                    const hiddenValidator = document.createElement('input');
+                    hiddenValidator.type = 'hidden';
+                    hiddenValidator.className = 'multiple-choice-validator';
+                    hiddenValidator.dataset.name = question.id;
+                    hiddenValidator.required = true;
+                    multipleChoiceContainer.appendChild(hiddenValidator);
+                }
+                
+                cardBody.appendChild(multipleChoiceContainer);
+                break;
+                
+            case 'rating':
+                const ratingContainer = document.createElement('div');
+                ratingContainer.className = 'rating-container d-flex flex-wrap';
+                
+                question.options.forEach((option, index) => {
+                    const formCheck = document.createElement('div');
+                    formCheck.className = 'form-check form-check-inline me-3';
+                    
+                    const radioInput = document.createElement('input');
+                    radioInput.className = 'form-check-input';
+                    radioInput.type = 'radio';
+                    radioInput.name = question.id;
+                    radioInput.id = `rating_${option.id}`;
+                    radioInput.value = option.value;
+                    radioInput.required = question.required;
+                    
+                    const label = document.createElement('label');
+                    label.className = 'form-check-label';
+                    label.htmlFor = `rating_${option.id}`;
+                    label.textContent = option.text;
+                    
+                    formCheck.appendChild(radioInput);
+                    formCheck.appendChild(label);
+                    ratingContainer.appendChild(formCheck);
+                });
+                
+                cardBody.appendChild(ratingContainer);
+                break;
+                
+            case 'date':
+                const dateInput = document.createElement('input');
+                dateInput.type = 'date';
+                dateInput.className = 'form-control';
+                dateInput.name = question.id;
+                dateInput.id = `question_${question.id}`;
+                dateInput.required = question.required;
+                cardBody.appendChild(dateInput);
+                break;
+                
+            case 'number':
+                const numberInput = document.createElement('input');
+                numberInput.type = 'number';
+                numberInput.className = 'form-control';
+                numberInput.name = question.id;
+                numberInput.id = `question_${question.id}`;
+                numberInput.required = question.required;
+                numberInput.step = 'any';
+                
+                if (question.minValue !== undefined) {
+                    numberInput.min = question.minValue;
+                }
+                if (question.maxValue !== undefined) {
+                    numberInput.max = question.maxValue;
+                }
+                
+                cardBody.appendChild(numberInput);
+                break;
+                
+            case 'yes_no':
+                const yesNoContainer = document.createElement('div');
+                yesNoContainer.className = 'd-flex';
+                
+                // Yes option
+                const yesFormCheck = document.createElement('div');
+                yesFormCheck.className = 'form-check form-check-inline';
+                
+                const yesInput = document.createElement('input');
+                yesInput.className = 'form-check-input';
+                yesInput.type = 'radio';
+                yesInput.name = question.id;
+                yesInput.id = `yes_${question.id}`;
+                yesInput.value = 'YES';
+                yesInput.required = question.required;
+                
+                const yesLabel = document.createElement('label');
+                yesLabel.className = 'form-check-label';
+                yesLabel.htmlFor = `yes_${question.id}`;
+                yesLabel.textContent = '{% trans "Yes" %}';
+                
+                yesFormCheck.appendChild(yesInput);
+                yesFormCheck.appendChild(yesLabel);
+                
+                // No option
+                const noFormCheck = document.createElement('div');
+                noFormCheck.className = 'form-check form-check-inline';
+                
+                const noInput = document.createElement('input');
+                noInput.className = 'form-check-input';
+                noInput.type = 'radio';
+                noInput.name = question.id;
+                noInput.id = `no_${question.id}`;
+                noInput.value = 'NO';
+                
+                const noLabel = document.createElement('label');
+                noLabel.className = 'form-check-label';
+                noLabel.htmlFor = `no_${question.id}`;
+                noLabel.textContent = '{% trans "No" %}';
+                
+                noFormCheck.appendChild(noInput);
+                noFormCheck.appendChild(noLabel);
+                
+                yesNoContainer.appendChild(yesFormCheck);
+                yesNoContainer.appendChild(noFormCheck);
+                cardBody.appendChild(yesNoContainer);
+                break;
+        }
+
+        card.appendChild(cardBody);
+        
+        // Add change event listeners to update answered questions count
+        const inputs = cardBody.querySelectorAll('input, textarea, select');
+        inputs.forEach(input => {
+            input.addEventListener('change', updateAnsweredQuestionsCount);
+        });
+        
+        return card;
+    }
+
+    function renderSurvey() {
+        questionsContainer.innerHTML = ''; // Clear previous questions
+
+        const val = questionsPerPageSelect.value;
+        itemsPerPage = (val === 'all') ? totalQuestions : parseInt(val, 10);
+
+        const totalPages = Math.max(1, Math.ceil(totalQuestions / itemsPerPage));
+        currentPage = Math.max(1, Math.min(currentPage, totalPages));
+
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = Math.min(startIndex + itemsPerPage, totalQuestions);
+
+        const questionsToRender = questions.slice(startIndex, endIndex);
+
+        questionsToRender.forEach(question => {
+            questionsContainer.appendChild(renderQuestion(question));
+        });
+
+        // Update pagination controls
+        pageInfoSpan.textContent = `{% trans "Page" %} ${currentPage} {% trans "of" %} ${totalPages}`;
+        prevButton.disabled = currentPage === 1;
+        nextButton.disabled = currentPage === totalPages;
+        
+        // Update progress info
+        totalQuestionsSpan.textContent = totalQuestions;
+        totalQuestionsSpan2.textContent = totalQuestions;
+        currentPageSpan.textContent = currentPage;
+        totalPagesSpan.textContent = totalPages;
+
+        // Hide pagination if only one page
+        const paginationControls = document.getElementById('pagination-controls');
+        paginationControls.style.display = totalPages <= 1 ? 'none' : 'flex';
+        
+        // Check for conditional questions
+        updateConditionalQuestions();
+    }
+    
+    function updateAnsweredQuestionsCount() {
+        answeredQuestions = 0;
+        const allInputs = document.querySelectorAll('#survey-form input:not([type="hidden"]), #survey-form textarea, #survey-form select');
+        
+        const answeredMap = new Map();
+        
+        allInputs.forEach(input => {
+            const questionId = input.name;
+            if (!questionId) return;
+            
+            if (input.type === 'radio' || input.type === 'checkbox') {
+                if (input.checked && !answeredMap.has(questionId)) {
+                    answeredMap.set(questionId, true);
+                    answeredQuestions++;
+                }
+            } else if ((input.value || '').trim() !== '' && !answeredMap.has(questionId)) {
+                answeredMap.set(questionId, true);
+                answeredQuestions++;
+            }
+        });
+        
+        answeredQuestionsSpan.textContent = answeredQuestions;
+        
+        // Update progress bar
+        const progressBar = document.querySelector('.progress-bar');
+        const progressPercentage = totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0;
+        progressBar.style.width = `${progressPercentage}%`;
+        progressBar.textContent = `${progressPercentage}%`;
+        progressBar.setAttribute('aria-valuenow', progressPercentage);
+    }
+    
+    function updateConditionalQuestions() {
+        // Find all questions with dependencies
+        const conditionalQuestions = document.querySelectorAll('[data-dependent-on]');
+        
+        conditionalQuestions.forEach(questionCard => {
+            const dependentOnId = questionCard.dataset.dependentOn;
+            const dependentValue = questionCard.dataset.dependentValue;
+            
+            // Find the input for the parent question
+            const parentInputs = document.querySelectorAll(`input[name="${dependentOnId}"]`);
+            
+            let shouldShow = false;
+            
+            // Check if any radio/checkbox with the dependent value is checked
+            parentInputs.forEach(input => {
+                if (input.checked && input.value === dependentValue) {
+                    shouldShow = true;
+                }
+            });
+            
+            // Show or hide based on condition
+            questionCard.style.display = shouldShow ? 'block' : 'none';
+            
+            // If hiding, clear inputs to avoid submitting data from hidden questions
+            if (!shouldShow) {
+                const inputs = questionCard.querySelectorAll('input, textarea, select');
+                inputs.forEach(input => {
+                    if (input.type === 'checkbox' || input.type === 'radio') {
+                        input.checked = false;
+                    } else {
+                        input.value = '';
+                    }
+                });
+            }
+        });
+        
+        // Update answered count after showing/hiding questions
+        updateAnsweredQuestionsCount();
+    }
+
+    // --- Event Listeners ---
+    questionsPerPageSelect.addEventListener('change', () => {
+        currentPage = 1; // Reset to first page when changing items per page
+        renderSurvey();
+        window.scrollTo(0, 0); // Scroll to top
+    });
+
+    prevButton.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            renderSurvey();
+            window.scrollTo(0, 0); // Scroll to top
+        }
+    });
+
+    nextButton.addEventListener('click', () => {
+        const totalPages = Math.ceil(totalQuestions / itemsPerPage);
+        if (currentPage < totalPages) {
+            currentPage++;
+            renderSurvey();
+            window.scrollTo(0, 0); // Scroll to top
+        }
+    });
+
+    // Event delegation for conditional questions
+    document.addEventListener('change', function(e) {
+        const target = e.target;
+        if (target.tagName === 'INPUT' && (target.type === 'radio' || target.type === 'checkbox')) {
+            updateConditionalQuestions();
+        }
+    });
+
+    // Multiple choice validation
+    surveyForm.addEventListener('submit', function(event) {
+        // Validate multiple choice questions marked as required
+        const validators = document.querySelectorAll('.multiple-choice-validator');
+        
+        validators.forEach(validator => {
+            const name = validator.dataset.name;
+            const checkboxes = document.querySelectorAll(`input[type="checkbox"][name="${name}"]`);
+            
+            let isChecked = false;
+            checkboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    isChecked = true;
+                }
+            });
+            
+            if (!isChecked && validator.required) {
+                event.preventDefault();
+                // Find the parent card and highlight it
+                const questionCard = validator.closest('.question-card');
+                if (questionCard) {
+                    questionCard.scrollIntoView({ behavior: 'smooth' });
+                    questionCard.classList.add('border-danger');
+                    
+                    // Show validation message
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'alert alert-danger mt-2';
+                    errorMsg.textContent = '{% trans "Please select at least one option" %}';
+                    
+                    // Remove any existing error messages
+                    const existingErrors = questionCard.querySelectorAll('.alert-danger');
+                    existingErrors.forEach(err => err.remove());
+                    
+                    questionCard.querySelector('.card-body').appendChild(errorMsg);
+                }
+            }
+        });
+    });
+
+    // --- Initialize ---
+    window.addEventListener('DOMContentLoaded', () => {
+        // Set counters
+        totalQuestionsSpan.textContent = totalQuestions;
+        totalQuestionsSpan2.textContent = totalQuestions;
+        
+        // Render the survey
+        renderSurvey();
+        
+        // Initial count of answered questions
+        updateAnsweredQuestionsCount();
+    });
+    </script>
+</body>
+</html>

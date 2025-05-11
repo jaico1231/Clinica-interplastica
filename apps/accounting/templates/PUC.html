@@ -1,0 +1,218 @@
+{% extends 'index.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Plan Único de Cuentas (PUC)</h6>
+            <button class="btn btn-primary btn-sm" onclick="openPUCModal(null, 'grupo')">
+                <i class="fas fa-plus-circle mr-2"></i>Nuevo Grupo
+            </button>
+        </div>
+        
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="puc-table" width="100%" cellspacing="0">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Tipo</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for grupo in grupos %}
+                        <tr class="table-group">
+                            <td class="font-weight-bold">{{ grupo.codigo }}</td>
+                            <td class="font-weight-bold">{{ grupo.nombre }}</td>
+                            <td><span class="badge badge-primary">GRUPO</span></td>
+                            <td>
+                                <button class="btn btn-success btn-sm" 
+                                        onclick="openPUCModal({{ grupo.id }}, 'cuenta')"
+                                        title="Agregar Cuenta">
+                                    <i class="fas fa-plus"></i> Cuenta
+                                </button>
+                            </td>
+                        </tr>
+                        
+                        {% for cuenta in grupo.cuentas.all %}
+                        <tr class="table-account">
+                            <td style="padding-left: 40px;">{{ cuenta.codigo }}</td>
+                            <td>{{ cuenta.nombre }}</td>
+                            <td><span class="badge badge-success">CUENTA</span></td>
+                            <td>
+                                <button class="btn btn-info btn-sm" 
+                                        onclick="openPUCModal({{ cuenta.id }}, 'subcuenta')"
+                                        title="Agregar Subcuenta">
+                                    <i class="fas fa-plus"></i> Subcuenta
+                                </button>
+                            </td>
+                        </tr>
+                        
+                        {% for subcuenta in cuenta.subcuentas.all %}
+                        <tr class="table-subaccount">
+                            <td style="padding-left: 80px;">{{ subcuenta.codigo }}</td>
+                            <td>{{ subcuenta.nombre }}</td>
+                            <td><span class="badge badge-info">SUBCUENTA</span></td>
+                            <td>
+                                <button class="btn btn-warning btn-sm" 
+                                        onclick="openPUCModal({{ subcuenta.id }}, 'detalle')"
+                                        title="Agregar Detalle">
+                                    <i class="fas fa-plus"></i> Detalle
+                                </button>
+                            </td>
+                        </tr>
+                        
+                        {% for detalle in subcuenta.detalles.all %}
+                        <tr class="table-detail">
+                            <td style="padding-left: 120px;">{{ detalle.codigo }}</td>
+                            <td>{{ detalle.nombre }}</td>
+                            <td><span class="badge badge-warning">DETALLE</span></td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-secondary btn-sm" disabled>
+                                        <i class="fas fa-lock"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% endfor %}
+                        {% endfor %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para agregar elementos -->
+<div class="modal fade" id="pucModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle"></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- El formulario se cargará aquí mediante AJAX -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block javascripts %}
+<script>
+function openPUCModal(parentId, levelType) {
+    const modalTitleMap = {
+        'grupo': 'Nuevo Grupo',
+        'cuenta': 'Nueva Cuenta',
+        'subcuenta': 'Nueva Subcuenta',
+        'detalle': 'Nueva Cuenta Detalle'
+    };
+    
+    // Configurar modal
+    $('#modalTitle').text(modalTitleMap[levelType]);
+    $('#modalBody').html('<div class="text-center"><i class="fas fa-spinner fa-spin fa-3x"></i></div>');
+    $('#pucModal').modal('show');
+
+    // Cargar formulario via AJAX
+    $.ajax({
+        url: "#",
+        method: 'GET',
+        data: {
+            'parent_id': parentId,
+            'level_type': levelType
+        },
+        success: function(response) {
+            $('#modalBody').html(response.form_html);
+            initializeFormValidation();
+        },
+        error: function(error) {
+            $('#modalBody').html('<div class="alert alert-danger">Error al cargar el formulario</div>');
+        }
+    });
+}
+
+function initializeFormValidation() {
+    // Inicializar validación de formulario
+    $('#pucForm').validate({
+        rules: {
+            codigo: {
+                required: true,
+                minlength: 1,
+                maxlength: 20
+            },
+            nombre: {
+                required: true,
+                minlength: 3,
+                maxlength: 200
+            }
+        },
+        messages: {
+            codigo: {
+                required: "El código es obligatorio",
+                minlength: "Mínimo 1 carácter",
+                maxlength: "Máximo 20 caracteres"
+            },
+            nombre: {
+                required: "El nombre es obligatorio",
+                minlength: "Mínimo 3 caracteres",
+                maxlength: "Máximo 200 caracteres"
+            }
+        },
+        submitHandler: function(form) {
+            submitPUCForm(form);
+        }
+    });
+}
+
+function submitPUCForm(form) {
+    const formData = new FormData(form);
+    
+    $.ajax({
+        url: $(form).attr('action'),
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if(response.success) {
+                $('#pucModal').modal('hide');
+                location.reload(); // Recargar para ver los cambios
+            }
+        },
+        error: function(error) {
+            const errors = error.responseJSON.errors || {};
+            // Mostrar errores en el formulario
+            $.each(errors, function(field, messages) {
+                const input = $('[name="' + field + '"]');
+                input.addClass('is-invalid');
+                input.after('<div class="invalid-feedback">' + messages.join('<br>') + '</div>');
+            });
+        }
+    });
+}
+</script>
+
+<style>
+.table-group { background-color: #f8f9fa; }
+.table-account { background-color: #e9ecef; }
+.table-subaccount { background-color: #dee2e6; }
+.table-detail { background-color: #ced4da; }
+
+.badge-primary { background-color: #4e73df; }
+.badge-success { background-color: #1cc88a; }
+.badge-info { background-color: #36b9cc; }
+.badge-warning { background-color: #f6c23e; }
+
+.btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
+</style>
+{% endblock javascripts %}

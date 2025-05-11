@@ -1,0 +1,1696 @@
+import datetime
+from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse_lazy, reverse
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, FormView, TemplateView, View
+from django.views.generic.edit import FormMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.contrib import messages
+from django.http import JsonResponse, HttpResponseRedirect
+from django.db import transaction
+from django.utils.translation import gettext as _
+from django.utils import timezone
+from django.forms import modelformset_factory, inlineformset_factory
+from django.db.models import Q, Count
+from apps.base.views.genericcsvimportview import GenericCSVImportView
+from apps.base.views.genericexportview import GenericExportView
+from apps.base.views.genericlistview import OptimizedSecureListView
+from datetime import datetime
+
+from apps.surveys.forms.question_form import QuestionForm
+# from apps.surveys.forms.questionchoice_form import QuestionChoiceForm, QuestionChoiceFormSet
+from apps.surveys.forms.survey_form import (
+    IndicatorFilterForm, SurveyForm, 
+    # QuestionForm, QuestionChoiceForm, 
+    # QuestionFormSet, QuestionChoiceFormSet,
+    ResponseForm
+    )
+
+from apps.surveys.models.surveymodel import (
+    Survey, QuestionType, Question, QuestionChoice,
+    Response, Answer, AnswerChoice, Period, Indicator
+    )
+
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from django.conf import settings
+from weasyprint import HTML, CSS
+import os
+
+
+import io
+from django.template.loader import get_template
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import mm, cm
+from reportlab.platypus import PageBreak
+
+
+class SurveyListView(OptimizedSecureListView):
+    """
+    Vista optimizada para listar encuestas con capacidades avanzadas
+    de búsqueda, filtrado y exportación.
+    """
+    permission_required = 'survey.view_survey'
+    model = Survey
+    template_name = 'core/list.html'
+    
+    # Definir explícitamente los campos para búsqueda
+    search_fields = ['title', 'description']
+    # Ordenamiento por defecto
+    order_by = ('-created_at', 'title')
+    
+    # Atributos específicos
+    title = _('Listado de Encuestas')
+    entity = _('Encuesta')
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # Búsqueda personalizada para encuestas publicadas, no publicadas, etc.
+        status = self.request.GET.get('status', '')
+        if status:
+            if status == 'published':
+                queryset = queryset.filter(is_published=True)
+            elif status == 'unpublished':
+                queryset = queryset.filter(is_published=False)
+            elif status == 'active':
+                today = timezone.now().date()
+                queryset = queryset.filter(is_published=True)
+                queryset = queryset.filter(start_date__lte=today)
+                queryset = queryset.filter(Q(end_date__isnull=True) | Q(end_date__gte=today))
+            elif status == 'expired':
+                today = timezone.now().date()
+                queryset = queryset.filter(
+                    is_published=True,
+                    end_date__lt=today
+                )
+            elif status == 'upcoming':
+                today = timezone.now().date()
+                queryset = queryset.filter(
+                    is_published=True,
+                    start_date__gt=today
+                )
+        
+        # Filtro por rango de fechas
+        start_from = self.request.GET.get('start_from', '')
+        start_to = self.request.GET.get('start_to', '')
+        if start_from:
+            try:
+                start_date = datetime.strptime(start_from, '%Y-%m-%d').date()
+                queryset = queryset.filter(start_date__gte=start_date)
+            except ValueError:
+                pass
+        if start_to:
+            try:
+                end_date = datetime.strptime(start_to, '%Y-%m-%d').date()
+                queryset = queryset.filter(start_date__lte=end_date)
+            except ValueError:
+                pass
+        
+        # Filtro por número de preguntas
+        min_questions = self.request.GET.get('min_questions', '')
+        if min_questions and min_questions.isdigit():
+            queryset = queryset.annotate(
+                question_count=Count('questions', filter=Q(questions__is_active=True))
+            ).filter(question_count__gte=int(min_questions))
+        
+        # Filtro por número de respuestas
+        min_responses = self.request.GET.get('min_responses', '')
+        if min_responses and min_responses.isdigit():
+            queryset = queryset.annotate(
+                response_count=Count('responses', filter=Q(responses__is_active=True))
+            ).filter(response_count__gte=int(min_responses))
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Configuración específica para esta vista
+        context['headers'] = ['TÍTULO', 'DESCRIPCIÓN', 'PUBLICADO', 'FECHA INICIO', 'FECHA FIN', 'PREGUNTAS', 'RESPUESTAS']
+        context['fields'] = ['title', 'description', 'is_published', 'start_date', 'end_date', 'question_count', 'response_count']
+        
+        # Configuración de botones y acciones
+        context['Btn_Add'] = [
+            {
+                'name': 'add',
+                'label': _('Crear Encuesta'),
+                'icon': 'add',
+                'url': 'encuestas:survey_create',
+                'modal': True,
+            }
+        ]
+        
+        # context['url_export'] = 'encuestas:survey-download'
+        
+        context['actions'] = [
+            {
+                'name': 'view',
+                'label': '',
+                'icon': 'visibility',
+                'color': 'info',
+                'color2': 'white',
+                'title': _('Ver Encuesta'),
+                'url': 'encuestas:survey_detail',
+                'modal': False
+            },
+            {
+                'name': 'del',
+                'label': '',
+                'icon': 'delete',
+                'color': 'danger',
+                'color2': 'white',
+                'title': _('Eliminar Encuesta'),
+                'url': 'encuestas:survey_delete',
+                'modal': True
+            },
+            {
+                'name': 'publish',
+                'label': '',
+                'icon': 'publish',
+                'color': 'success',
+                'color2': 'white',
+                'title': _('Publicar Encuesta'),
+                'url': 'encuestas:survey_publish',
+                'modal': True
+            },
+        ]
+        
+        # Filtros adicionales específicos para encuestas
+        context['custom_filters'] = {
+            'status': [
+                {'value': 'published', 'label': _('Publicadas')},
+                {'value': 'unpublished', 'label': _('No Publicadas')},
+                {'value': 'active', 'label': _('Activas')},
+                {'value': 'expired', 'label': _('Expiradas')},
+                {'value': 'upcoming', 'label': _('Próximas')},
+            ]
+        }
+        
+        # URL de cancelación
+        context['cancel_url'] = reverse_lazy('encuestas:survey_list')
+        
+        return context
+
+
+class SurveyDetailView(LoginRequiredMixin, DetailView):
+    """Show survey details"""
+    model = Survey
+    context_object_name = 'survey'
+    template_name = 'surveys/survey_detail.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['questions'] = self.object.questions.filter(is_active=True).order_by('order')
+        context['response_count'] = self.object.response_count
+        context['url_export'] = 'encuestas:survey_export'
+        return context
+
+
+class SurveyCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    """
+    Vista para crear una nueva encuesta
+    La auditoría se maneja automáticamente por las señales post_save
+    """
+    permission_required = 'survey.add_survey'
+    model = Survey
+    form_class = SurveyForm
+    template_name = 'core/create.html'
+    
+    def get_success_url(self):
+        return reverse_lazy('encuestas:survey_list')
+    
+    def form_valid(self, form):
+        # Guardar la encuesta - la auditoría se maneja por señales
+        self.object = form.save()
+        
+        messages.success(self.request, _('Encuesta creada con éxito'))
+        
+        # Verificar si es una solicitud AJAX
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'message': _('Encuesta creada con éxito'),
+                'redirect': self.get_success_url().resolve(self.request)
+            })
+        
+        return super().form_valid(form)
+    
+    def form_invalid(self, form):
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            errors = {}
+            for field, error_list in form.errors.items():
+                errors[field] = [str(error) for error in error_list]
+                
+            return JsonResponse({
+                'success': False,
+                'errors': errors
+            }, status=400)
+            
+        return super().form_invalid(form)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = _('Crear Encuesta')
+        context['entity'] = _('Encuesta')
+        context['list_url'] = reverse_lazy('encuestas:survey_list')
+        context['action'] = 'add'
+        return context
+
+
+class SurveyUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    """
+    Vista para actualizar información de una encuesta
+    La auditoría es manejada automáticamente por las señales pre_save y post_save
+    """
+    permission_required = 'survey.change_survey'
+    model = Survey
+    form_class = SurveyForm
+    template_name = 'core/create.html'
+    
+    def get_success_url(self):
+        return reverse_lazy('encuestas:survey_list')
+    
+    def form_valid(self, form):
+        # Guardar la encuesta - la auditoría se maneja por señales
+        self.object = form.save(commit=True)
+        
+        messages.success(self.request, _('Encuesta actualizada con éxito'))
+        
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'message': _('Encuesta actualizada con éxito'),
+                'redirect': self.get_success_url().resolve(self.request)
+            })
+            
+        return super().form_valid(form)
+    
+    def form_invalid(self, form):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            errors = {}
+            for field, error_list in form.errors.items():
+                errors[field] = [str(error) for error in error_list]
+                
+            return JsonResponse({
+                'success': False,
+                'errors': errors
+            }, status=400)
+            
+        return super().form_invalid(form)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = _('Editar Encuesta')
+        context['entity'] = _('Encuesta')
+        context['list_url'] = reverse_lazy('encuestas:survey_list')
+        context['action'] = 'edit'
+        return context
+
+
+class SurveyDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    """
+    Vista para eliminar una encuesta
+    La auditoría es manejada automáticamente por la señal post_delete
+    """
+    permission_required = 'survey.delete_survey'
+    model = Survey
+    template_name = 'core/del.html'
+    context_object_name = 'Encuesta'
+    success_url = reverse_lazy('encuestas:survey_list')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = _('Eliminar Encuesta')
+        context['entity'] = _('Encuesta')
+        context['texto'] = f'¿Seguro de eliminar la Encuesta {self.object}?'
+        context['list_url'] = reverse_lazy('encuestas:survey_list')
+        return context
+    
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        
+        try:
+            # La auditoría se maneja automáticamente con la señal post_delete
+            self.object.delete()
+            messages.success(request, _('Encuesta eliminada con éxito'))
+            
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': _('Encuesta eliminada con éxito'),
+                    'redirect': self.success_url
+                })
+                
+            return redirect(self.success_url)
+            
+        except Exception as e:
+            # Capturar errores de integridad referencial
+            error_message = _('No se puede eliminar la encuesta porque está siendo utilizada en otros registros')
+            
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': error_message
+                }, status=400)
+                
+            messages.error(request, error_message)
+            return redirect(self.success_url)
+
+
+class SurveyPublishView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    """
+    Vista para publicar encuestas
+    La auditoría se maneja con las señales de pre_save y post_save
+    """
+    permission_required = 'survey.change_survey'
+    model = Survey
+    template_name = 'core/confirm.html'  # Add a template for confirmation
+    fields = ['is_published']
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = _('Publicar Encuesta')
+        context['texto'] = _('¿Está seguro de que desea publicar esta encuesta?')
+        context['btn_text'] = _('Publicar')
+        context['btn_class'] = 'btn-success'
+        return context
+    
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        
+        # Cambiar estado de publicación - la auditoría registrará el cambio automáticamente
+        self.object.is_published = True
+        self.object.save(update_fields=['is_published'])
+        
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'is_published': self.object.is_published,
+                'message': _("Encuesta publicada correctamente"),
+                'reload': True
+            })
+            
+        messages.success(request, _("Encuesta publicada correctamente"))
+        return redirect('encuestas:survey_detail', pk=self.object.pk)
+
+
+class SurveyUnpublishView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    """
+    Vista para despublicar encuestas
+    La auditoría se maneja con las señales de pre_save y post_save
+    """
+    permission_required = 'survey.change_survey'
+    model = Survey
+    template_name = 'core/confirm.html'  # Add a template for confirmation
+    fields = ['is_published']
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = _('Despublicar Encuesta')
+        context['texto'] = _('¿Está seguro de que desea despublicar esta encuesta?')
+        context['btn_text'] = _('Despublicar')
+        context['btn_class'] = 'btn-warning'
+        return context
+    
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        
+        # Cambiar estado de publicación - la auditoría registrará el cambio automáticamente
+        self.object.is_published = False
+        self.object.save(update_fields=['is_published'])
+        
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'is_published': self.object.is_published,
+                'message': _("Encuesta despublicada correctamente"),
+                'reload': True
+            })
+            
+        messages.success(request, _("Encuesta despublicada correctamente"))
+        return redirect('encuestas:survey_detail', pk=self.object.pk)
+
+
+class SurveyImportView(GenericCSVImportView):
+    """
+    Vista para importar encuestas desde un archivo CSV
+    """
+    model = Survey
+    form_class = SurveyForm
+    success_url = reverse_lazy('encuestas:survey_list')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = _('Importar Encuestas')
+        context['entity'] = _('Encuesta')
+        context['list_url'] = self.success_url
+        return context
+    
+    def clean_row_data(self, row):
+        """
+        Sobrescribimos este método para manejar conversiones específicas
+        para el modelo Survey
+        """
+        cleaned_data = super().clean_row_data(row)
+        
+        # Convertir fechas si están en formato texto
+        for date_field in ['start_date', 'end_date']:
+            if date_field in cleaned_data and cleaned_data[date_field] and isinstance(cleaned_data[date_field], str):
+                try:
+                    # Intentar convertir a fecha
+                    from datetime import datetime
+                    cleaned_data[date_field] = datetime.strptime(cleaned_data[date_field], '%Y-%m-%d').date()
+                except ValueError:
+                    # Si falla, establecer como None
+                    cleaned_data[date_field] = None
+        
+        # Asegurar que is_published sea booleano
+        if 'is_published' in cleaned_data:
+            if isinstance(cleaned_data['is_published'], str):
+                cleaned_data['is_published'] = cleaned_data['is_published'].lower() in ['true', 'yes', 'si', '1', 'verdadero']
+        
+        return cleaned_data
+
+
+class SurveyPreviewView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+    """
+    Vista para previsualizar una encuesta antes de publicarla
+    Muestra las preguntas y opciones de respuesta como las verían los encuestados
+    """
+    permission_required = 'surveys.view_survey'  
+    model = Survey
+    context_object_name = 'survey'
+    template_name = 'surveys/survey_preview.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = _('Previsualización de Encuesta')
+        context['entity'] = _('Encuesta')
+        
+        # Obtener todas las preguntas activas ordenadas por el campo 'order'
+        context['questions'] = self.object.questions.filter(is_active=True).order_by('order')
+        
+        # Agregar información adicional para la previsualización
+        context['is_preview'] = True
+        context['today'] = timezone.now().date()
+        
+        # Verificar el estado actual de la encuesta
+        context['published'] = self.object.is_published
+        context['is_active'] = (
+            self.object.is_published and 
+            (not self.object.start_date or self.object.start_date <= context['today']) and
+            (not self.object.end_date or self.object.end_date >= context['today'])
+        )
+        
+        # Obtener el formulario de respuesta para simular cómo se verá
+        context['form'] = ResponseForm()
+        
+        # URLs para acciones posteriores a la previsualización
+        context['return_url'] = reverse('encuestas:survey_detail', kwargs={'pk': self.object.pk})
+        context['publish_url'] = reverse('encuestas:survey_publish', kwargs={'pk': self.object.pk})
+        context['edit_url'] = reverse('encuestas:survey_update', kwargs={'pk': self.object.pk})
+        
+        return context
+
+# Survey Response Views
+class SurveyResponseCreateView(CreateView):
+    """Public view for filling out a survey"""
+    model = Response
+    form_class = ResponseForm
+    template_name = 'surveys/response_form.html'
+    
+    def dispatch(self, request, *args, **kwargs):
+        """Check if survey exists and is published"""
+        survey_id = self.kwargs.get('survey_id')
+        self.survey = get_object_or_404(
+            Survey, 
+            pk=survey_id, 
+            is_active=True, 
+            is_published=True
+        )
+        
+        # Check if survey is within valid dates
+        today = timezone.now().date()
+        if self.survey.start_date and self.survey.start_date > today:
+            messages.error(request, 'This survey is not yet available.')
+            return redirect('encuestas:survey_unavailable')
+        
+        if self.survey.end_date and self.survey.end_date < today:
+            messages.error(request, 'This survey is no longer available.')
+            return redirect('encuestas:survey_unavailable')
+        
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['survey'] = self.survey
+        context['questions'] = self.survey.questions.filter(is_active=True).order_by('order')
+        return context
+    
+    def form_valid(self, form):
+        """Save the response with respondent info"""
+        with transaction.atomic():
+            # Set response metadata
+            form.instance.survey = self.survey
+            form.instance.respondent_ip = self.request.META.get('REMOTE_ADDR')
+            
+            # Set respondent if user is logged in
+            if self.request.user.is_authenticated:
+                form.instance.respondent = self.request.user
+            
+            # Set period if applicable (current month/year)
+            now = timezone.now()
+            try:
+                month_name = now.strftime('%B').upper()
+                period = Period.objects.get(month=month_name, year=now.year)
+                form.instance.period = period
+            except Period.DoesNotExist:
+                # No period for current month/year
+                pass
+            
+            # Mark as completed
+            form.instance.is_complete = True
+            form.instance.completed_at = now
+            
+            response = form.save()
+            
+            # Process and save individual question answers
+            self._save_answers(response)
+        
+        messages.success(self.request, 'Thank you for completing the survey!')
+        return HttpResponseRedirect(self.get_success_url())
+    
+    def _save_answers(self, response):
+        """Save individual answers from the form data"""
+        survey_questions = self.survey.questions.filter(is_active=True)
+        
+        for question in survey_questions:
+            # Skip questions that were not shown (conditional logic)
+            question_id = str(question.id)
+            if question_id not in self.request.POST:
+                continue
+            
+            # Create answer object
+            answer = Answer(
+                response=response,
+                question=question,
+                created_by=self.request.user if self.request.user.is_authenticated else None,
+                modified_by=self.request.user if self.request.user.is_authenticated else None
+            )
+            
+            # Save appropriate answer type based on question type
+            question_type = question.question_type.name
+            answer_value = self.request.POST.get(question_id)
+            
+            if question_type == QuestionType.TEXT or question_type == QuestionType.TEXT_AREA:
+                answer.text_answer = answer_value
+            
+            elif question_type == QuestionType.NUMBER:
+                try:
+                    answer.number_answer = float(answer_value) if answer_value else None
+                except ValueError:
+                    answer.text_answer = answer_value  # Fallback if not a valid number
+            
+            elif question_type == QuestionType.DATE:
+                try:
+                    answer.date_answer = answer_value
+                except ValueError:
+                    answer.text_answer = answer_value  # Fallback if not a valid date
+            
+            elif question_type == QuestionType.YES_NO:
+                answer.boolean_answer = answer_value.upper() == 'YES'
+            
+            elif question_type == QuestionType.RATING:
+                try:
+                    answer.number_answer = float(answer_value) if answer_value else None
+                except ValueError:
+                    pass
+                
+                # Also save as a choice selection
+                answer.save()
+                
+                # Find and save the selected choice
+                try:
+                    choice = QuestionChoice.objects.get(question=question, value=answer_value)
+                    AnswerChoice.objects.create(
+                        answer=answer,
+                        choice=choice,
+                        created_by=answer.created_by,
+                        modified_by=answer.modified_by
+                    )
+                except QuestionChoice.DoesNotExist:
+                    pass
+                
+                continue  # Skip the save below since we already saved for choice association
+            
+            elif question_type == QuestionType.SINGLE_CHOICE:
+                # Save as text for the main answer
+                answer.text_answer = answer_value
+                answer.save()
+                
+                # Find and save the selected choice
+                try:
+                    choice = QuestionChoice.objects.get(question=question, value=answer_value)
+                    AnswerChoice.objects.create(
+                        answer=answer,
+                        choice=choice,
+                        created_by=answer.created_by,
+                        modified_by=answer.modified_by
+                    )
+                except QuestionChoice.DoesNotExist:
+                    pass
+                
+                continue  # Skip the save below since we already saved for choice association
+            
+            elif question_type == QuestionType.MULTIPLE_CHOICE:
+                # For multiple choice, answers come as a list
+                answer.text_answer = ", ".join(self.request.POST.getlist(question_id))
+                answer.save()
+                
+                # Find and save each selected choice
+                for choice_value in self.request.POST.getlist(question_id):
+                    try:
+                        choice = QuestionChoice.objects.get(question=question, value=choice_value)
+                        AnswerChoice.objects.create(
+                            answer=answer,
+                            choice=choice,
+                            created_by=answer.created_by,
+                            modified_by=answer.modified_by
+                        )
+                    except QuestionChoice.DoesNotExist:
+                        pass
+                
+                continue  # Skip the save below since we already saved for choice association
+            
+            # Save the answer for non-choice questions
+            answer.save()
+    
+    def get_success_url(self):
+        return reverse('encuestas:survey_thank_you')
+
+
+# class SurveyExportView(GenericExportView):
+#     """
+#     Vista para exportar encuestas en varios formatos como CSV, PDF y Excel.
+#     """
+#     model = Survey
+#     fields = ['title', 'description', 'start_date', 'end_date', 
+#               'is_published', 'questions_per_page', 'allow_save_and_continue',
+#               'show_progress_bar', 'allow_page_navigation', 'show_results_after_completion']
+#     permission_required = 'surveys.view_survey'
+    
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+        
+#         # Agregar formatos disponibles
+#         context['export_formats'] = [
+#             {'format': 'csv', 'label': 'CSV'},
+#             {'format': 'pdf', 'label': 'PDF'},
+#             {'format': 'excel', 'label': 'Excel'}
+#         ]
+        
+#         # Opciones adicionales específicas para encuestas
+#         context['export_options'] = [
+#             {
+#                 'name': 'include_questions',
+#                 'label': _('Include Questions'),
+#                 'type': 'checkbox',
+#                 'default': True
+#             },
+#             {
+#                 'name': 'include_responses',
+#                 'label': _('Include Responses'),
+#                 'type': 'checkbox',
+#                 'default': False
+#             }
+#         ]
+        
+#         return context
+    
+#     def get_queryset(self):
+#         """
+#         Personaliza el queryset para incluir información relacionada
+#         si es necesario según las opciones seleccionadas.
+#         """
+#         queryset = super().get_queryset()
+        
+#         # Obtener opciones de exportación del formulario
+#         include_questions = self.request.GET.get('include_questions') == 'on'
+        
+#         # Prefetch related para mejorar rendimiento si es necesario
+#         if include_questions:
+#             queryset = queryset.prefetch_related('questions', 'questions__choices')
+        
+#         return queryset
+    
+#     def get_export_data(self, queryset, export_format, **kwargs):
+#         """
+#         Personaliza los datos de exportación según el formato y opciones.
+#         Permite incluir preguntas y opciones anidadas según las opciones seleccionadas.
+#         """
+#         # Obtener datos básicos usando el método de la clase padre
+#         data = super().get_export_data(queryset, export_format, **kwargs)
+        
+#         # Obtener opciones de exportación
+#         include_questions = self.request.GET.get('include_questions') == 'on'
+#         include_responses = self.request.GET.get('include_responses') == 'on'
+        
+#         # Si estamos incluyendo preguntas, agregarlas a los datos
+#         if include_questions:
+#             # Para cada encuesta, incluir sus preguntas
+#             for survey_data in data:
+#                 survey = Survey.objects.get(id=survey_data['id'])
+#                 questions = []
+                
+#                 for question in survey.questions.all().order_by('order'):
+#                     question_data = {
+#                         'id': question.id,
+#                         'text': question.text,
+#                         'type': question.question_type.name,
+#                         'required': question.is_required,
+#                         'order': question.order
+#                     }
+                    
+#                     # Incluir opciones para preguntas con opciones
+#                     if question.has_choices:
+#                         choices = []
+#                         for choice in question.choices.all().order_by('order'):
+#                             choices.append({
+#                                 'text': choice.text,
+#                                 'value': choice.value,
+#                                 'order': choice.order
+#                             })
+#                         question_data['choices'] = choices
+                    
+#                     questions.append(question_data)
+                
+#                 survey_data['questions'] = questions
+        
+#         # Si estamos incluyendo respuestas, agregarlas a los datos
+#         if include_responses:
+#             for survey_data in data:
+#                 survey = Survey.objects.get(id=survey_data['id'])
+#                 responses_data = []
+                
+#                 for response in survey.responses.filter(is_complete=True):
+#                     response_data = {
+#                         'id': response.id,
+#                         'respondent': str(response.respondent) if response.respondent else 'Anonymous',
+#                         'created_at': response.created_at,
+#                         'answers': []
+#                     }
+                    
+#                     # Incluir respuestas individuales
+#                     for answer in response.answers.all():
+#                         answer_data = {
+#                             'question_id': answer.question.id,
+#                             'question_text': answer.question.text,
+#                         }
+                        
+#                         # Según el tipo de pregunta, agregar el valor correspondiente
+#                         if answer.question.question_type.name == 'TEXT' or answer.question.question_type.name == 'TEXT_AREA':
+#                             answer_data['value'] = answer.text_answer
+#                         elif answer.question.question_type.name == 'NUMBER':
+#                             answer_data['value'] = answer.number_answer
+#                         elif answer.question.question_type.name == 'DATE':
+#                             answer_data['value'] = answer.date_answer
+#                         elif answer.question.question_type.name == 'YES_NO':
+#                             answer_data['value'] = answer.boolean_answer
+#                         elif answer.question.question_type.name == 'SINGLE_CHOICE':
+#                             choice = answer.choice
+#                             answer_data['value'] = choice.text if choice else None
+#                         elif answer.question.question_type.name == 'MULTIPLE_CHOICE':
+#                             choices = answer.choices.all()
+#                             answer_data['value'] = [choice.text for choice in choices]
+                        
+#                         response_data['answers'].append(answer_data)
+                    
+#                     responses_data.append(response_data)
+                
+#                 survey_data['responses'] = responses_data
+        
+#         return data
+
+
+
+class SurveyPDFExportView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """
+    Vista para exportar encuestas en formato PDF usando ReportLab,
+    ya sea como formulario vacío o con las respuestas de un usuario específico.
+    """
+    permission_required = 'surveys.view_survey'
+    
+    def get(self, request, *args, **kwargs):
+        survey_id = kwargs.get('pk')
+        response_id = request.GET.get('response_id', None)
+        
+        # Obtener la encuesta
+        survey = get_object_or_404(Survey, pk=survey_id)
+        
+        # Determinar si estamos generando un formulario vacío o con respuestas
+        survey_response = None
+        if response_id:
+            survey_response = get_object_or_404(Response, pk=response_id, survey=survey)
+            filename = f"survey_{survey.id}_response_{survey_response.id}.pdf"
+        else:
+            filename = f"survey_{survey.id}_blank.pdf"
+        
+        # Obtener preguntas ordenadas
+        questions = survey.questions.filter(is_active=True).order_by('order')
+        
+        # Crear el documento PDF
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            rightMargin=2*cm,
+            leftMargin=2*cm,
+            topMargin=2*cm,
+            bottomMargin=2*cm
+        )
+        
+        # Generar contenido del PDF
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Estilos personalizados
+        styles.add(ParagraphStyle(
+            name='Title',
+            parent=styles['Title'],
+            fontSize=16,
+            spaceAfter=12
+        ))
+        
+        styles.add(ParagraphStyle(
+            name='Description',
+            parent=styles['Normal'],
+            fontSize=10,
+            fontStyle='italic',
+            spaceAfter=10
+        ))
+        
+        styles.add(ParagraphStyle(
+            name='QuestionText',
+            parent=styles['Normal'],
+            fontSize=11,
+            fontWeight='bold',
+            spaceAfter=6
+        ))
+        
+        styles.add(ParagraphStyle(
+            name='QuestionDescription',
+            parent=styles['Normal'],
+            fontSize=10,
+            fontStyle='italic',
+            spaceAfter=6
+        ))
+        
+        styles.add(ParagraphStyle(
+            name='AnswerText',
+            parent=styles['Normal'],
+            fontSize=10,
+            leftIndent=20,
+            spaceAfter=6
+        ))
+        
+        # Título de la encuesta
+        elements.append(Paragraph(survey.title, styles['Title']))
+        
+        # Descripción de la encuesta
+        if survey.description:
+            elements.append(Paragraph(survey.description, styles['Description']))
+        
+        # Información básica
+        survey_info = [
+            ['<b>Fecha Inicio:</b>', survey.start_date.strftime('%d/%m/%Y') if survey.start_date else 'N/A'],
+            ['<b>Fecha Fin:</b>', survey.end_date.strftime('%d/%m/%Y') if survey.end_date else 'N/A'],
+        ]
+        
+        survey_info_table = Table(survey_info, colWidths=[100, 150])
+        survey_info_table.setStyle(TableStyle([
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
+            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('PADDING', (0, 0), (-1, -1), 6),
+        ]))
+        
+        elements.append(survey_info_table)
+        elements.append(Spacer(1, 12))
+        
+        # Información del encuestado si es un formulario en blanco
+        if not survey_response:
+            elements.append(Paragraph('Información del Encuestado', styles['Heading2']))
+            
+            respondent_info = [
+                ['<b>Nombre:</b>', '______________________________'],
+                ['<b>Email:</b>', '______________________________'],
+                ['<b>Fecha:</b>', '______________________________'],
+            ]
+            
+            respondent_table = Table(respondent_info, colWidths=[100, 300])
+            respondent_table.setStyle(TableStyle([
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
+                ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+                ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('PADDING', (0, 0), (-1, -1), 6),
+            ]))
+            
+            elements.append(respondent_table)
+        else:
+            # Información de la respuesta
+            elements.append(Paragraph('Información de la Respuesta', styles['Heading2']))
+            
+            respondent_info = [
+                ['<b>Respondiente:</b>', str(survey_response.respondent) if survey_response.respondent else 'Anónimo'],
+                ['<b>IP:</b>', survey_response.respondent_ip or 'No registrada'],
+                ['<b>Fecha de Respuesta:</b>', survey_response.created_at.strftime('%d/%m/%Y %H:%M')],
+                ['<b>Completada:</b>', 'Sí' if survey_response.is_complete else 'No'],
+            ]
+            
+            respondent_table = Table(respondent_info, colWidths=[120, 280])
+            respondent_table.setStyle(TableStyle([
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
+                ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+                ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('PADDING', (0, 0), (-1, -1), 6),
+            ]))
+            
+            elements.append(respondent_table)
+            
+            # Crear un diccionario de respuestas para acceso rápido
+            answers_dict = {}
+            for answer in survey_response.answers.all():
+                answers_dict[answer.question.id] = answer
+        
+        elements.append(Spacer(1, 12))
+        elements.append(Paragraph('Preguntas', styles['Heading2']))
+        elements.append(Spacer(1, 6))
+        
+        # Procesar cada pregunta
+        for i, question in enumerate(questions, 1):
+            # Texto de la pregunta con su número
+            question_text = f"{i}. {question.text}"
+            if question.is_required:
+                question_text += " *"
+            elements.append(Paragraph(question_text, styles['QuestionText']))
+            
+            # Descripción de la pregunta
+            if question.description:
+                elements.append(Paragraph(question.description, styles['QuestionDescription']))
+            
+            # Obtener respuesta si existe
+            answer = None
+            if survey_response:
+                answer = answers_dict.get(question.id)
+            
+            # Renderizar según tipo de pregunta
+            question_type = question.question_type.name
+            
+            if question_type == QuestionType.TEXT or question_type == QuestionType.TEXT_AREA:
+                if answer:
+                    elements.append(Paragraph(answer.text_answer or 'Sin respuesta', styles['AnswerText']))
+                else:
+                    height = 100 if question_type == QuestionType.TEXT_AREA else 30
+                    elements.append(Spacer(1, height))
+                    
+            elif question_type == QuestionType.NUMBER:
+                if answer:
+                    value = str(answer.number_answer) if answer.number_answer is not None else 'Sin respuesta'
+                    elements.append(Paragraph(value, styles['AnswerText']))
+                else:
+                    elements.append(Spacer(1, 30))
+                    
+            elif question_type == QuestionType.DATE:
+                if answer:
+                    value = answer.date_answer.strftime('%d/%m/%Y') if answer.date_answer else 'Sin respuesta'
+                    elements.append(Paragraph(value, styles['AnswerText']))
+                else:
+                    elements.append(Spacer(1, 30))
+                    
+            elif question_type == QuestionType.YES_NO:
+                yes_checked = False
+                no_checked = False
+                
+                if answer:
+                    yes_checked = answer.boolean_answer == True
+                    no_checked = answer.boolean_answer == False
+                
+                choices_data = [
+                    ['[{}] Sí'.format('X' if yes_checked else ' ')],
+                    ['[{}] No'.format('X' if no_checked else ' ')],
+                ]
+                
+                choices_table = Table(choices_data, colWidths=[200])
+                choices_table.setStyle(TableStyle([
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 20),
+                ]))
+                
+                elements.append(choices_table)
+                
+            elif question_type in [QuestionType.SINGLE_CHOICE, QuestionType.MULTIPLE_CHOICE, QuestionType.RATING]:
+                choices_data = []
+                
+                for choice in question.choices.all():
+                    checked = False
+                    
+                    if answer:
+                        if question_type == QuestionType.SINGLE_CHOICE:
+                            if answer.text_answer == choice.value:
+                                checked = True
+                            for answer_choice in answer.choices.all():
+                                if answer_choice.choice.id == choice.id:
+                                    checked = True
+                                    
+                        elif question_type == QuestionType.MULTIPLE_CHOICE:
+                            for answer_choice in answer.choices.all():
+                                if answer_choice.choice.id == choice.id:
+                                    checked = True
+                                    
+                        elif question_type == QuestionType.RATING:
+                            if answer.text_answer == choice.value:
+                                checked = True
+                    
+                    choices_data.append(['[{}] {}'.format('X' if checked else ' ', choice.text)])
+                
+                if choices_data:
+                    choices_table = Table(choices_data, colWidths=[350])
+                    choices_table.setStyle(TableStyle([
+                        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                        ('LEFTPADDING', (0, 0), (-1, -1), 20),
+                    ]))
+                    
+                    elements.append(choices_table)
+            
+            # Espaciador entre preguntas
+            elements.append(Spacer(1, 15))
+        
+        # Notas al pie si es un formulario en blanco
+        if not survey_response:
+            elements.append(Spacer(1, 10))
+            elements.append(Paragraph("* Pregunta obligatoria", styles['Normal']))
+            elements.append(Paragraph("Por favor complete todas las preguntas obligatorias.", styles['Normal']))
+        
+        # Nota de generación
+        elements.append(Spacer(1, 20))
+        generation_date = timezone.now().strftime('%d/%m/%Y %H:%M')
+        elements.append(Paragraph(f"Documento generado el {generation_date}", styles['Normal']))
+        
+        # Construir el PDF
+        doc.build(elements)
+        pdf = buffer.getvalue()
+        buffer.close()
+        
+        # Devolver la respuesta HTTP
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
+
+
+
+# class SurveyPDFExportView(LoginRequiredMixin, PermissionRequiredMixin, View):
+#     """
+#     Vista para exportar encuestas en formato PDF usando WeasyPrint,
+#     ya sea como formulario vacío o con las respuestas de un usuario específico.
+#     """
+#     permission_required = 'surveys.view_survey'
+    
+#     def get(self, request, *args, **kwargs):
+#         survey_id = kwargs.get('pk')
+#         response_id = request.GET.get('response_id', None)
+        
+#         # Obtener la encuesta
+#         survey = get_object_or_404(Survey, pk=survey_id)
+        
+#         # Determinar si estamos generando un formulario vacío o con respuestas
+#         survey_response = None
+#         if response_id:
+#             survey_response = get_object_or_404(Response, pk=response_id, survey=survey)
+#             filename = f"survey_{survey.id}_response_{survey_response.id}.pdf"
+#             template_path = 'surveys/pdf/survey_response_pdf.html'
+#         else:
+#             filename = f"survey_{survey.id}_blank.pdf"
+#             template_path = 'surveys/pdf/survey_blank_pdf.html'
+        
+#         # Obtener preguntas ordenadas
+#         questions = survey.questions.filter(is_active=True).order_by('order')
+        
+#         # Contexto para la plantilla
+#         context = {
+#             'survey': survey,
+#             'questions': questions,
+#             'response': survey_response,
+#             'request': request,
+#             'STATIC_URL': settings.STATIC_URL,
+#             'base_url': request.build_absolute_uri('/')[:-1]
+#         }
+        
+#         # Si hay respuesta, agregar las respuestas al contexto
+#         if survey_response:
+#             # Crear un diccionario para acceder fácilmente a las respuestas por id de pregunta
+#             answers_dict = {}
+#             for answer in survey_response.answers.all():
+#                 answers_dict[answer.question.id] = answer
+#             context['answers_dict'] = answers_dict
+        
+#         # Renderizar el HTML
+#         html_string = render_to_string(template_path, context)
+        
+#         # Rutas para los recursos estáticos
+#         base_url = request.build_absolute_uri('/')[:-1]
+        
+#         # Crear el PDF con WeasyPrint
+#         html = HTML(string=html_string, base_url=base_url)
+        
+#         # Aplicar estilos adicionales si es necesario
+#         css_paths = []
+        
+#         # Agregar CSS personalizado para el PDF
+#         css_path = os.path.join(settings.STATIC_ROOT, 'css', 'pdf_styles.css')
+#         if os.path.exists(css_path):
+#             css_paths.append(css_path)
+        
+#         # Crear el PDF
+#         if css_paths:
+#             css = [CSS(filename=path) for path in css_paths]
+#             pdf = html.write_pdf(stylesheets=css)
+#         else:
+#             pdf = html.write_pdf()
+        
+#         # Crear la respuesta HTTP
+#         http_response = HttpResponse(pdf, content_type='application/pdf')
+#         http_response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+#         return http_response
+
+
+
+class SurveyThankYouView(TemplateView):
+    """Show thank you page after survey completion"""
+    template_name = 'surveys/thank_you.html'
+
+
+class SurveyUnavailableView(TemplateView):
+    """Show unavailable message if survey is not active"""
+    template_name = 'surveys/survey_unavailable.html'
+
+
+# Response Management Views
+class ResponseListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    """List all responses for a survey"""
+    model = Response
+    context_object_name = 'responses'
+    template_name = 'surveys/response_list.html'
+    permission_required = 'surveys.view_response'
+    
+    def get_queryset(self):
+        """Filter responses by survey_id"""
+        survey_id = self.kwargs.get('survey_id')
+        return Response.objects.filter(
+            survey_id=survey_id, 
+            is_active=True, 
+            is_complete=True
+        ).order_by('-created_at')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        survey_id = self.kwargs.get('survey_id')
+        context['survey'] = get_object_or_404(Survey, pk=survey_id)
+        context['title'] = f'Responses for {context["survey"].title}'
+        return context
+
+
+class ResponseDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+    """Show response details"""
+    model = Response
+    context_object_name = 'response'
+    template_name = 'surveys/response_detail.html'
+    permission_required = 'surveys.view_response'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['answers'] = self.object.answers.all().order_by('question__order')
+        context['title'] = f'Response Details (ID: {self.object.id})'
+        return context
+
+
+# Period Management Views
+class PeriodListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    """List all periods"""
+    model = Period
+    context_object_name = 'periods'
+    template_name = 'surveys/period_list.html'
+    permission_required = 'surveys.view_period'
+    
+    def get_queryset(self):
+        """Show only active periods"""
+        return Period.objects.filter(is_active=True).order_by('-start_date')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Time Periods'
+        return context
+
+
+class PeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    """Create a new period"""
+    model = Period
+    fields = ['name', 'month', 'year', 'start_date', 'end_date']
+    template_name = 'surveys/period_form.html'
+    success_url = reverse_lazy('encuestas:period_list')
+    permission_required = 'surveys.add_period'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Create New Period'
+        return context
+    
+    def form_valid(self, form):
+        """Save the period with the current user as creator"""
+        form.instance.created_by = self.request.user
+        form.instance.modified_by = self.request.user
+        messages.success(self.request, 'Period created successfully.')
+        return super().form_valid(form)
+
+
+class PeriodUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    """Update an existing period"""
+    model = Period
+    fields = ['name', 'month', 'year', 'start_date', 'end_date']
+    template_name = 'surveys/period_form.html'
+    context_object_name = 'period'
+    success_url = reverse_lazy('encuestas:period_list')
+    permission_required = 'surveys.change_period'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Update Period'
+        return context
+    
+    def form_valid(self, form):
+        """Update the modified_by field on save"""
+        form.instance.modified_by = self.request.user
+        messages.success(self.request, 'Period updated successfully.')
+        return super().form_valid(form)
+
+
+class PeriodDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    """Delete a period"""
+    model = Period
+    template_name = 'surveys/period_confirm_delete.html'
+    success_url = reverse_lazy('encuestas:period_list')
+    context_object_name = 'period'
+    permission_required = 'surveys.delete_period'
+    
+    def form_valid(self, form):
+        """Soft delete the period by setting is_active=False"""
+        self.object.is_active = False
+        self.object.deleted_at = timezone.now()
+        self.object.deleted_by = self.request.user
+        self.object.save()
+        messages.success(self.request, 'Period deleted successfully.')
+        return HttpResponseRedirect(self.get_success_url())
+
+
+# Dashboard and Analysis Views
+class SurveyDashboardView(LoginRequiredMixin, DetailView):
+    """Dashboard for survey analytics"""
+    model = Survey
+    context_object_name = 'survey'
+    template_name = 'surveys/survey_dashboard.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = f'Dashboard: {self.object.title}'
+        
+        # Add analytics data
+        context['total_responses'] = self.object.response_count
+        context['recent_responses'] = self.object.responses.filter(
+            is_active=True, 
+            is_complete=True
+        ).order_by('-created_at')[:5]
+        
+        # Get indicators if any
+        context['indicators'] = self.object.indicators.filter(
+            is_active=True
+        ).order_by('category', 'name')
+        
+        return context
+
+
+class CalculateIndicatorsView(LoginRequiredMixin, PermissionRequiredMixin, FormView):
+    """View to calculate/update indicators for a period"""
+    template_name = 'surveys/calculate_indicators.html'
+    form_class = SurveyForm  # Using a dummy form, we only need the POST action
+    permission_required = 'surveys.add_indicator'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['surveys'] = Survey.objects.filter(is_active=True)
+        context['periods'] = Period.objects.filter(is_active=True).order_by('-start_date')
+        context['title'] = 'Calculate Survey Indicators'
+        return context
+    
+    def form_valid(self, form):
+        """Calculate indicators for the selected period and survey"""
+        period_id = self.request.POST.get('period')
+        survey_id = self.request.POST.get('survey')
+        
+        if not period_id or not survey_id:
+            messages.error(self.request, 'Please select both a period and a survey.')
+            return self.form_invalid(form)
+        
+        try:
+            period = Period.objects.get(pk=period_id, is_active=True)
+            survey = Survey.objects.get(pk=survey_id, is_active=True)
+            
+            # Call indicator calculation logic
+            indicator_count = self._calculate_survey_indicators(survey, period)
+            
+            messages.success(
+                self.request, 
+                f'Successfully calculated {indicator_count} indicators for {period}.'
+            )
+            
+        except (Period.DoesNotExist, Survey.DoesNotExist):
+            messages.error(self.request, 'Invalid period or survey selected.')
+            return self.form_invalid(form)
+        
+        return super().form_valid(form)
+    
+    def _calculate_survey_indicators(self, survey, period):
+        """Calculate or update indicators for a survey in a specific period"""
+        # Get responses for this survey in this period
+        responses = Response.objects.filter(
+            survey=survey,
+            period=period,
+            is_active=True,
+            is_complete=True
+        )
+        
+        if not responses.exists():
+            messages.warning(
+                self.request, 
+                f'No responses found for {survey.title} in {period}.'
+            )
+            return 0
+        
+        # Dictionary to store indicators we've created/updated
+        indicators_created = 0
+        
+        # Process each question in the survey
+        for question in survey.questions.filter(is_active=True):
+            question_type = question.question_type.name
+            
+            # Get all answers for this question
+            answers = Answer.objects.filter(
+                response__in=responses,
+                question=question,
+                is_active=True
+            )
+            
+            # Skip if no answers
+            if not answers.exists():
+                continue
+                
+            # Calculate indicators based on question type
+            if question_type in [QuestionType.SINGLE_CHOICE, QuestionType.MULTIPLE_CHOICE, QuestionType.RATING]:
+                # For choice-based questions, calculate distribution of each choice
+                choices = question.choices.filter(is_active=True)
+                total_answers = answers.count()
+                
+                for choice in choices:
+                    # Count selections of this choice
+                    choice_count = AnswerChoice.objects.filter(
+                        answer__in=answers,
+                        choice=choice,
+                        is_active=True
+                    ).count()
+                    
+                    # Calculate percentage
+                    percentage = (choice_count / total_answers * 100) if total_answers > 0 else 0
+                    
+                    # Create or update indicator
+                    indicator, created = Indicator.objects.update_or_create(
+                        period=period,
+                        survey=survey,
+                        question=question,
+                        name=f"{choice.text}",
+                        defaults={
+                            'description': f"Percentage of '{choice.text}' responses for question: {question.text}",
+                            'count_value': choice_count,
+                            'numeric_value': choice_count,
+                            'percentage_value': percentage,
+                            'category': question.text[:50],
+                            'created_by': self.request.user,
+                            'modified_by': self.request.user
+                        }
+                    )
+                    
+                    if not created:
+                        # Update the indicator if it already existed
+                        indicator.count_value = choice_count
+                        indicator.numeric_value = choice_count
+                        indicator.percentage_value = percentage
+                        indicator.modified_by = self.request.user
+                        indicator.save()
+                    
+                    indicators_created += 1
+                
+            elif question_type == QuestionType.YES_NO:
+                # For yes/no questions, calculate yes percentage
+                yes_count = answers.filter(boolean_answer=True).count()
+                total_answers = answers.count()
+                yes_percentage = (yes_count / total_answers * 100) if total_answers > 0 else 0
+                
+                # Create or update indicator
+                indicator, created = Indicator.objects.update_or_create(
+                    period=period,
+                    survey=survey,
+                    question=question,
+                    name=f"Yes Responses",
+                    defaults={
+                        'description': f"Percentage of 'Yes' responses for question: {question.text}",
+                        'count_value': yes_count,
+                        'numeric_value': yes_count,
+                        'percentage_value': yes_percentage,
+                        'category': question.text[:50],
+                        'created_by': self.request.user,
+                        'modified_by': self.request.user
+                    }
+                )
+                
+                if not created:
+                    # Update the indicator if it already existed
+                    indicator.count_value = yes_count
+                    indicator.numeric_value = yes_count
+                    indicator.percentage_value = yes_percentage
+                    indicator.modified_by = self.request.user
+                    indicator.save()
+                
+                indicators_created += 1
+                
+            elif question_type == QuestionType.NUMBER:
+                # For numeric questions, calculate average
+                numeric_answers = answers.exclude(number_answer__isnull=True)
+                if numeric_answers.exists():
+                    from django.db.models import Avg, Min, Max, Count
+                    
+                    # Calculate statistics
+                    stats = numeric_answers.aggregate(
+                        avg=Avg('number_answer'),
+                        min=Min('number_answer'),
+                        max=Max('number_answer'),
+                        count=Count('id')
+                    )
+                    
+                    # Create or update average indicator
+                    avg_indicator, created = Indicator.objects.update_or_create(
+                        period=period,
+                        survey=survey,
+                        question=question,
+                        name=f"Average Value",
+                        defaults={
+                            'description': f"Average numeric value for question: {question.text}",
+                            'count_value': stats['count'],
+                            'numeric_value': stats['avg'],
+                            'percentage_value': None,
+                            'category': question.text[:50],
+                            'created_by': self.request.user,
+                            'modified_by': self.request.user
+                        }
+                    )
+                    
+                    if not created:
+                        # Update the indicator if it already existed
+                        avg_indicator.count_value = stats['count']
+                        avg_indicator.numeric_value = stats['avg']
+                        avg_indicator.modified_by = self.request.user
+                        avg_indicator.save()
+                    
+                    indicators_created += 1
+                    
+                    # Also create min/max indicators
+                    min_indicator, created = Indicator.objects.update_or_create(
+                        period=period,
+                        survey=survey,
+                        question=question,
+                        name=f"Minimum Value",
+                        defaults={
+                            'description': f"Minimum numeric value for question: {question.text}",
+                            'count_value': 1,
+                            'numeric_value': stats['min'],
+                            'percentage_value': None,
+                            'category': question.text[:50],
+                            'created_by': self.request.user,
+                            'modified_by': self.request.user
+                        }
+                    )
+                    
+                    if not created:
+                        min_indicator.numeric_value = stats['min']
+                        min_indicator.modified_by = self.request.user
+                        min_indicator.save()
+                    
+                    max_indicator, created = Indicator.objects.update_or_create(
+                        period=period,
+                        survey=survey,
+                        question=question,
+                        name=f"Maximum Value",
+                        defaults={
+                            'description': f"Maximum numeric value for question: {question.text}",
+                            'count_value': 1,
+                            'numeric_value': stats['max'],
+                            'percentage_value': None,
+                            'category': question.text[:50],
+                            'created_by': self.request.user,
+                            'modified_by': self.request.user
+                        }
+                    )
+                    
+                    if not created:
+                        max_indicator.numeric_value = stats['max']
+                        max_indicator.modified_by = self.request.user
+                        max_indicator.save()
+                    
+                    indicators_created += 2
+            
+            # Add total response count indicator for all question types
+            total_indicator, created = Indicator.objects.update_or_create(
+                period=period,
+                survey=survey,
+                question=question,
+                name=f"Total Responses",
+                defaults={
+                    'description': f"Total number of responses for question: {question.text}",
+                    'count_value': answers.count(),
+                    'numeric_value': answers.count(),
+                    'percentage_value': 100.0,
+                    'category': question.text[:50],
+                    'created_by': self.request.user,
+                    'modified_by': self.request.user
+                }
+            )
+            
+            if not created:
+                total_indicator.count_value = answers.count()
+                total_indicator.numeric_value = answers.count()
+                total_indicator.modified_by = self.request.user
+                total_indicator.save()
+            
+            indicators_created += 1
+        
+        # Create overall survey response count
+        total_responses = responses.count()
+        survey_indicator, created = Indicator.objects.update_or_create(
+            period=period,
+            survey=survey,
+            question=None,  # No specific question
+            name=f"Survey Completion Count",
+            defaults={
+                'description': f"Total number of completed responses for the entire survey",
+                'count_value': total_responses,
+                'numeric_value': total_responses,
+                'percentage_value': 100.0,
+                'category': 'Survey Overview',
+                'created_by': self.request.user,
+                'modified_by': self.request.user
+            }
+        )
+        
+        if not created:
+            survey_indicator.count_value = total_responses
+            survey_indicator.numeric_value = total_responses
+            survey_indicator.modified_by = self.request.user
+            survey_indicator.save()
+        
+        indicators_created += 1
+        
+        return indicators_created
+    
+    def get_success_url(self):
+        return reverse('encuestas:indicator_list')
+
+
+class IndicatorListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    """List all indicators with filtering options"""
+    model = Indicator
+    context_object_name = 'indicators'
+    template_name = 'surveys/indicator_list.html'
+    permission_required = 'surveys.view_indicator'
+    
+    def get_queryset(self):
+        """Filter indicators based on form data"""
+        queryset = Indicator.objects.filter(is_active=True)
+        
+        # Apply filters if provided
+        survey_id = self.request.GET.get('survey')
+        period_id = self.request.GET.get('period')
+        category = self.request.GET.get('category')
+        
+        if survey_id:
+            queryset = queryset.filter(survey_id=survey_id)
+        
+        if period_id:
+            queryset = queryset.filter(period_id=period_id)
+        
+        if category:
+            queryset = queryset.filter(category__icontains=category)
+        
+        return queryset.order_by('period', 'survey', 'category', 'name')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Survey Indicators'
+        
+        # Add filter form
+        context['filter_form'] = IndicatorFilterForm(self.request.GET or None)
+        
+        # Group indicators for better display
+        context['grouped_indicators'] = {}
+        
+        for indicator in context['indicators']:
+            period_id = indicator.period_id
+            survey_id = indicator.survey_id
+            category = indicator.category
+            
+            if period_id not in context['grouped_indicators']:
+                context['grouped_indicators'][period_id] = {}
+            
+            if survey_id not in context['grouped_indicators'][period_id]:
+                context['grouped_indicators'][period_id][survey_id] = {}
+            
+            if category not in context['grouped_indicators'][period_id][survey_id]:
+                context['grouped_indicators'][period_id][survey_id][category] = []
+            
+            context['grouped_indicators'][period_id][survey_id][category].append(indicator)
+        
+        return context

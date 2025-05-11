@@ -1,0 +1,186 @@
+{% extends "surveys/base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block page_title %}{% trans "Edit Hierarchy Item" %} - {{ item.text }}{% endblock %}
+
+{% block header %}{% trans "Edit Hierarchy Item" %}{% endblock %}
+
+{% block page_content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'encuestas:survey_list' %}">{% trans "Surveys" %}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'encuestas:survey_detail' survey.id %}">{{ survey.title }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'encuestas:hierarchy_item_list' question.id %}">{% trans "Hierarchy Items" %}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{% trans "Edit Item" %}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-md-8 col-lg-6 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">{% trans "Edit Hierarchy Item" %}</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Form Context -->
+                    <div class="mb-4">
+                        <p class="fw-bold mb-1">{% trans "Question" %}:</p>
+                        <p>{{ question.text }}</p>
+                        
+                        <p class="fw-bold mb-1">{% trans "Item" %}:</p>
+                        <p>{{ item.text }}</p>
+                        
+                        <p class="fw-bold mb-1">{% trans "Current Level" %}:</p>
+                        <p>{{ item.level }} {% if item.parent %}({% trans "Child of" %}: {{ item.parent.text|truncatechars:30 }}){% else %}({% trans "Top Level" %}){% endif %}</p>
+                    </div>
+
+                    <!-- Edit Item Form -->
+                    <form method="post" action="{% url 'encuestas:hierarchy_item_update' item.id %}">
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.text.id_for_label }}" class="form-label">{% trans "Item Text" %} <span class="text-danger">*</span></label>
+                            {{ form.text }}
+                            {% if form.text.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.text.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">{% trans "Description" %} <span class="text-muted">({% trans "Optional" %})</span></label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.description.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.order.id_for_label }}" class="form-label">{% trans "Display Order" %}</label>
+                                    {{ form.order }}
+                                    {% if form.order.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.order.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{% trans "Parent Item" %}</label>
+                                    <select name="parent_id" class="form-control">
+                                        <option value="">{% trans "None (Top Level)" %}</option>
+                                        {% for parent_item in possible_parents %}
+                                        <option value="{{ parent_item.id }}" {% if item.parent and item.parent.id == parent_item.id %}selected{% endif %}>
+                                            {{ parent_item.text|truncatechars:40 }} {% if parent_item.level > 0 %}(Level {{ parent_item.level }}){% endif %}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">{% trans "Note: You cannot select this item or any of its children as parent." %}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                {{ form.is_draggable }}
+                                <label class="form-check-label" for="{{ form.is_draggable.id_for_label }}">
+                                    {% trans "Allow respondents to reorder this item" %}
+                                </label>
+                            </div>
+                            {% if form.is_draggable.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.is_draggable.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                {{ form.is_editable }}
+                                <label class="form-check-label" for="{{ form.is_editable.id_for_label }}">
+                                    {% trans "Allow respondents to edit this item's text" %}
+                                </label>
+                            </div>
+                            {% if form.is_editable.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.is_editable.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.icon.id_for_label }}" class="form-label">{% trans "Icon" %} <span class="text-muted">({% trans "Optional" %})</span></label>
+                                    {{ form.icon }}
+                                    <div class="form-text">{% trans "Bootstrap icon class, e.g. bi-star" %}</div>
+                                    {% if form.icon.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.icon.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.custom_class.id_for_label }}" class="form-label">{% trans "CSS Class" %} <span class="text-muted">({% trans "Optional" %})</span></label>
+                                    {{ form.custom_class }}
+                                    <div class="form-text">{% trans "Custom CSS class for styling" %}</div>
+                                    {% if form.custom_class.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.custom_class.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Hidden fields -->
+                        {{ form.parent_id }}
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'encuestas:hierarchy_item_list' question.id %}" class="btn btn-outline-secondary">
+                                {% trans "Cancel" %}
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                {% trans "Update Item" %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

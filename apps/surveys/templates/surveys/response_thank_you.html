@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block page_title %}{% trans "Thank You" %}{% endblock %}
+
+{% block header %}{% trans "Thank You for Your Response" %}{% endblock %}
+
+{% block page_content %}
+<div class="card mb-4 shadow-sm">
+    <div class="card-body text-center py-5">
+        <div class="mb-4">
+            <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+        </div>
+        
+        <h2 class="h3 mb-3">{% trans "Your response has been recorded" %}</h2>
+        
+        <p class="lead mb-4">{% trans "Thank you for completing the survey:" %} <strong>{{ survey.title }}</strong></p>
+        
+        <p class="text-muted mb-4">
+            {% trans "Response ID:" %} {{ response.id }}<br>
+            {% trans "Submitted on:" %} {{ response.created_at|date:"F d, Y - H:i" }}
+        </p>
+        
+        {% if survey.description %}
+        <div class="alert alert-info mt-3">{{ survey.description }}</div>
+        {% endif %}
+        
+        <div class="mt-4">
+            <a href="{% url 'surveys:survey_list' %}" class="btn btn-primary">
+                <i class="bi bi-list-check"></i> {% trans "View Available Surveys" %}
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Certificate of completion - optional -->
+<div class="d-none d-print-block mt-5">
+    <div class="border border-3 p-5 text-center">
+        <h2 class="mb-4">{% trans "Certificate of Completion" %}</h2>
+        <p class="lead mb-4">{% trans "This certifies that" %}</p>
+        <h3 class="mb-4">{{ response.respondent_email|default:"Respondent" }}</h3>
+        <p class="lead mb-4">{% trans "has completed the survey" %}</p>
+        <h3 class="mb-4">{{ survey.title }}</h3>
+        <p class="mb-4">{% trans "on" %} {{ response.created_at|date:"F d, Y" }}</p>
+        <div class="mt-5">
+            <p class="small text-muted">{% trans "Response ID:" %} {{ response.id }}</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Print certificate option
+    document.addEventListener('DOMContentLoaded', function() {
+        const certificateSection = document.querySelector('.d-print-block');
+        
+        if (certificateSection) {
+            // Add print button if certificate section exists
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'text-center mt-4';
+            buttonContainer.innerHTML = `
+                <button type="button" class="btn btn-outline-primary" id="print-certificate">
+                    <i class="bi bi-printer"></i> {% trans "Print Certificate" %}
+                </button>
+            `;
+            
+            document.querySelector('.card').after(buttonContainer);
+            
+            // Print handler
+            document.getElementById('print-certificate').addEventListener('click', function() {
+                window.print();
+            });
+        }
+    });
+</script>
+{% endblock %}

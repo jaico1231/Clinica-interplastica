@@ -1,0 +1,63 @@
+{# chart_form.html #}
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static i18n %}
+
+{% block page_title %}
+  {% if chart %}{% trans "Editar Gráfico" %}{% else %}{% trans "Nuevo Gráfico" %}{% endif %}
+{% endblock %}
+
+{% block page_actions %}
+  <button id="saveChartBtn" class="btn btn-primary btn-sm">
+    <i class="fas fa-save"></i> {% trans "Guardar" %}
+  </button>
+  <a href="{% url 'dashboard:chart_list' %}" class="btn btn-secondary btn-sm">
+    <i class="fas fa-times"></i> {% trans "Cancelar" %}
+  </a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="row g-4">
+  <!-- Configuración -->
+  <div class="col-lg-4">
+    {% include 'dashboard/partials/chart_config_card.html' %}
+    {% include 'dashboard/partials/filters_card.html' %}
+    {% include 'dashboard/partials/advanced_options_card.html' %}
+  </div>
+  
+  <!-- Vista Previa -->
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-header d-flex justify-content-between">
+        <h5 class="card-title mb-0">{% trans "Vista Previa" %}</h5>
+        <button id="refreshPreview" class="btn btn-sm btn-outline-primary">
+          <i class="fas fa-sync"></i>
+        </button>
+      </div>
+      <div class="card-body position-relative">
+        <div id="previewLoader" class="chart-loader d-none">
+          <div class="spinner-border text-primary"></div>
+        </div>
+        <div id="chartContainer" class="chart-container">
+          <canvas id="previewCanvas"></canvas>
+        </div>
+        <div id="previewPlaceholder" class="chart-placeholder">
+          <i class="fas fa-chart-line"></i>
+          <p>{% trans "Complete la configuración para generar la vista previa" %}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'assets/js/dashboard/chart_builder.js' %}"></script>
+<script>
+  const CHART_DATA = {
+    models: {{ models_json|safe }},
+    chartTypes: {{ chart_types_json|safe }},
+    {% if chart %}existingData: {{ chart.to_json|safe }}{% endif %}
+  };
+  initChartBuilder(CHART_DATA);
+</script>
+{% endblock %}

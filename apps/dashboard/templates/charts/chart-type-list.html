@@ -1,0 +1,216 @@
+{% extends 'charts/base.html' %}
+
+{% block title %}Tipos de Gráficos | Dashboard{% endblock %}
+
+{% block page_title %}Tipos de Gráficos{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col" style="width: 50px;">Ícono</th>
+                                <th scope="col">Nombre</th>
+                                <th scope="col">Código</th>
+                                <th scope="col">Descripción</th>
+                                <th scope="col" style="width: 100px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for chart_type in chart_types %}
+                            <tr>
+                                <td class="text-center">
+                                    {% if chart_type.icon_class %}
+                                    <i class="{{ chart_type.icon_class }} fs-4"></i>
+                                    {% else %}
+                                    <i class="fas fa-chart-simple fs-4 text-secondary"></i>
+                                    {% endif %}
+                                </td>
+                                <td class="fw-semibold">{{ chart_type.name }}</td>
+                                <td><code>{{ chart_type.code }}</code></td>
+                                <td>{{ chart_type.description|default:"Sin descripción"|truncatewords:15 }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#chartTypeModal{{ chart_type.id }}"
+                                            title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <a href="{% url 'charts:saved_chart_create' %}?chart_type={{ chart_type.id }}" 
+                                       class="btn btn-sm btn-primary" 
+                                       title="Crear gráfico de este tipo">
+                                        <i class="fas fa-plus"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4">
+                                    <div class="text-muted">
+                                        <i class="fas fa-info-circle mb-2 fs-4"></i>
+                                        <p>No hay tipos de gráficos disponibles en este momento.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modales para detalles de cada tipo de gráfico -->
+{% for chart_type in chart_types %}
+<div class="modal fade" id="chartTypeModal{{ chart_type.id }}" tabindex="-1" aria-labelledby="chartTypeModalLabel{{ chart_type.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="chartTypeModalLabel{{ chart_type.id }}">
+                    {% if chart_type.icon_class %}
+                    <i class="{{ chart_type.icon_class }} me-2"></i>
+                    {% endif %}
+                    {{ chart_type.name }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <h6 class="text-muted">Código</h6>
+                    <code class="d-block p-2 bg-light rounded">{{ chart_type.code }}</code>
+                </div>
+                
+                <div class="mb-3">
+                    <h6 class="text-muted">Descripción</h6>
+                    <p>{{ chart_type.description|default:"Sin descripción" }}</p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">Ejemplo</h6>
+                        <div style="width:100%; height:200px;">
+                            <canvas class="chart-example" 
+                                   data-chart-type="{{ chart_type.code }}" 
+                                   id="exampleChart{{ chart_type.id }}"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a href="{% url 'charts:saved_chart_create' %}?chart_type={{ chart_type.id }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i> Crear gráfico de este tipo
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Generar ejemplos de gráficos para cada tipo
+        const chartExamples = document.querySelectorAll('.chart-example');
+        
+        chartExamples.forEach(function(canvas) {
+            const chartType = canvas.getAttribute('data-chart-type');
+            
+            // Datos de ejemplo
+            const labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'];
+            const data = {
+                labels: labels,
+                datasets: [{
+                    label: 'Datos de ejemplo',
+                    data: [65, 59, 80, 81, 56, 55],
+                    backgroundColor: getColorScheme(6),
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            };
+            
+            // Configuración basada en el tipo de gráfico
+            let chartConfig = {
+                type: 'bar', // Valor por defecto
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            };
+            
+            // Ajustar tipo de gráfico según el código
+            switch(chartType) {
+                case 'line':
+                    chartConfig.type = 'line';
+                    break;
+                case 'bar':
+                    chartConfig.type = 'bar';
+                    break;
+                case 'pie':
+                    chartConfig.type = 'pie';
+                    break;
+                case 'doughnut':
+                    chartConfig.type = 'doughnut';
+                    break;
+                case 'radar':
+                    chartConfig.type = 'radar';
+                    break;
+                case 'polar':
+                    chartConfig.type = 'polarArea';
+                    break;
+                case 'bubble':
+                    chartConfig.type = 'bubble';
+                    // Datos especiales para gráficos de burbujas
+                    chartConfig.data = {
+                        datasets: [{
+                            label: 'Datos de ejemplo',
+                            data: [
+                                { x: 20, y: 30, r: 15 },
+                                { x: 40, y: 10, r: 10 },
+                                { x: 30, y: 20, r: 8 },
+                                { x: 10, y: 40, r: 12 }
+                            ],
+                            backgroundColor: getColorScheme(4)
+                        }]
+                    };
+                    break;
+                case 'scatter':
+                    chartConfig.type = 'scatter';
+                    // Datos especiales para gráficos de dispersión
+                    chartConfig.data = {
+                        datasets: [{
+                            label: 'Datos de ejemplo',
+                            data: [
+                                { x: -10, y: 0 },
+                                { x: 0, y: 10 },
+                                { x: 10, y: 5 },
+                                { x: 0.5, y: 5.5 }
+                            ],
+                            backgroundColor: 'rgb(75, 192, 192)'
+                        }]
+                    };
+                    break;
+                default:
+                    // Mantener el tipo por defecto (bar)
+                    break;
+            }
+            
+            // Crear el gráfico
+            new Chart(canvas, chartConfig);
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Eliminar {{ model_verbose_name }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-danger text-white">
+        <h5 class="card-title">
+            <i class="fas fa-trash"></i> Confirmar eliminación
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-warning">
+            <p><i class="fas fa-exclamation-triangle"></i> ¿Está seguro que desea eliminar {{ model_verbose_name }} <strong>{{ object }}</strong>?</p>
+            <p>Esta acción {% if object.soft_delete %}desactivará{% else %}eliminará permanentemente{% endif %} el registro.</p>
+        </div>
+        
+        {% block object_details %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="card-title">Detalles del registro</h6>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    {% for field in object._meta.fields %}
+                    {% if field.name not in "is_deleted,deleted_at,deleted_by,created_at,created_by,modified_at,modified_by,password" %}
+                    <dt class="col-sm-3">{{ field.verbose_name|capfirst }}</dt>
+                    <dd class="col-sm-9">{{ object|getattribute:field.name|default:"-" }}</dd>
+                    {% endif %}
+                    {% endfor %}
+                </dl>
+            </div>
+        </div>
+        {% endblock %}
+        
+        <form method="post">
+            {% csrf_token %}
+            <div class="d-flex justify-content-between">
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash"></i> Sí, eliminar
+                </button>
+                <a href="{{ view.get_success_url }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+    <div class="card-footer text-muted">
+        <div class="row small">
+            <div class="col-md-6">
+                {% if object.created_by %}
+                <p>Creado por: {{ object.created_by }} ({{ object.created_at|date:"d/m/Y H:i" }})</p>
+                {% endif %}
+            </div>
+            <div class="col-md-6 text-end">
+                {% if object.modified_by %}
+                <p>Última modificación: {{ object.modified_by }} ({{ object.modified_at|date:"d/m/Y H:i" }})</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

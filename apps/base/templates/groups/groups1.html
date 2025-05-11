@@ -1,0 +1,219 @@
+{% extends 'index.html' %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h4>{{ title }}</h4>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    {{ form|crispy }}
+                </div>
+            </div>
+            
+            <div class="accordion" id="permissionsAccordion">
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingPermissions">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePermissions" aria-expanded="true" aria-controls="collapsePermissions">
+                            {% trans 'Permisos' %}
+                        </button>
+                    </h2>
+                    <div id="collapsePermissions" class="accordion-collapse collapse show" aria-labelledby="headingPermissions">
+                        <div class="accordion-body">
+                            <div class="d-flex justify-content-end mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="showOnlySelected">
+                                    <label class="form-check-label" for="showOnlySelected">{% trans 'Mostrar solo seleccionados' %}</label>
+                                </div>
+                            </div>
+                            
+                            <div class="table-responsive">
+                                <div class="mb-2">
+                                    <input type="text" id="permissionSearch" class="form-control" placeholder="{% trans 'Buscar permisos...' %}">
+                                </div>
+                                
+                                {% for app_name, models in permissions_by_app.items %}
+                                <div class="app-section mb-4">
+                                    <h5 class="border-bottom pb-2">{{ app_name|title }}</h5>
+                                    
+                                    {% for model_name, perms in models.items %}
+                                    <div class="model-section mb-3">
+                                        <h6 class="text-muted">{{ model_name|title }}</h6>
+                                        
+                                        <div class="row permission-group">
+                                            {% for perm in perms %}
+                                            <div class="col-md-3 mb-2 permission-item">
+                                                <div class="form-check">
+                                                    <input 
+                                                        class="form-check-input permission-checkbox"
+                                                        type="checkbox" 
+                                                        name="permissions" 
+                                                        value="{{ perm.id }}"
+                                                        id="perm_{{ perm.id }}"
+                                                        {% if action == 'update' and perm.selected %}checked{% endif %}
+                                                        data-model="{{ model_name }}"
+                                                        data-permission="{{ perm.codename }}"
+                                                    >
+                                                    <label class="form-check-label" for="perm_{{ perm.id }}">
+                                                        {{ perm.name }}
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        
+                                        <div class="row mt-1">
+                                            <div class="col">
+                                                <div class="btn-group btn-group-sm">
+                                                    <button type="button" class="btn btn-outline-secondary select-all-model" data-model="{{ model_name }}">
+                                                        {% trans 'Seleccionar todo' %}
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-secondary deselect-all-model" data-model="{{ model_name }}">
+                                                        {% trans 'Deseleccionar todo' %}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    {% if action == 'create' %}
+                        {% trans 'Crear Grupo' %}
+                    {% else %}
+                        {% trans 'Actualizar Grupo' %}
+                    {% endif %}
+                </button>
+                <a href="{% url 'configuracion:groups_list' %}" class="btn btn-secondary">{% trans 'Cancelar' %}</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extrajs %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Función para filtrar permisos
+        const permissionSearch = document.getElementById('permissionSearch');
+        permissionSearch.addEventListener('keyup', function() {
+            const searchTerm = this.value.toLowerCase();
+            const permissionItems = document.querySelectorAll('.permission-item');
+            
+            permissionItems.forEach(item => {
+                const permText = item.textContent.toLowerCase();
+                if (permText.includes(searchTerm)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+            
+            // Mostrar/ocultar secciones de modelos según resultados
+            document.querySelectorAll('.model-section').forEach(modelSection => {
+                const visibleItems = modelSection.querySelectorAll('.permission-item[style=""]').length;
+                if (visibleItems === 0) {
+                    modelSection.style.display = 'none';
+                } else {
+                    modelSection.style.display = '';
+                }
+            });
+            
+            // Mostrar/ocultar secciones de aplicaciones según resultados
+            document.querySelectorAll('.app-section').forEach(appSection => {
+                const visibleModels = appSection.querySelectorAll('.model-section[style=""]').length;
+                if (visibleModels === 0) {
+                    appSection.style.display = 'none';
+                } else {
+                    appSection.style.display = '';
+                }
+            });
+        });
+        
+        // Mostrar solo seleccionados
+        const showOnlySelected = document.getElementById('showOnlySelected');
+        showOnlySelected.addEventListener('change', function() {
+            const permissionItems = document.querySelectorAll('.permission-item');
+            
+            if (this.checked) {
+                permissionItems.forEach(item => {
+                    const checkbox = item.querySelector('input[type="checkbox"]');
+                    if (!checkbox.checked) {
+                        item.style.display = 'none';
+                    } else {
+                        item.style.display = '';
+                    }
+                });
+                
+                // Mostrar/ocultar secciones de modelos según resultados
+                document.querySelectorAll('.model-section').forEach(modelSection => {
+                    const visibleItems = modelSection.querySelectorAll('.permission-item[style=""]').length;
+                    if (visibleItems === 0) {
+                        modelSection.style.display = 'none';
+                    } else {
+                        modelSection.style.display = '';
+                    }
+                });
+                
+                // Mostrar/ocultar secciones de aplicaciones según resultados
+                document.querySelectorAll('.app-section').forEach(appSection => {
+                    const visibleModels = appSection.querySelectorAll('.model-section[style=""]').length;
+                    if (visibleModels === 0) {
+                        appSection.style.display = 'none';
+                    } else {
+                        appSection.style.display = '';
+                    }
+                });
+            } else {
+                permissionItems.forEach(item => {
+                    item.style.display = '';
+                });
+                
+                document.querySelectorAll('.model-section, .app-section').forEach(section => {
+                    section.style.display = '';
+                });
+                
+                // Volver a aplicar el filtro de búsqueda si hay texto
+                if (permissionSearch.value) {
+                    permissionSearch.dispatchEvent(new Event('keyup'));
+                }
+            }
+        });
+        
+        // Seleccionar todos los permisos de un modelo
+        document.querySelectorAll('.select-all-model').forEach(button => {
+            button.addEventListener('click', function() {
+                const model = this.getAttribute('data-model');
+                document.querySelectorAll(`.permission-checkbox[data-model="${model}"]`).forEach(checkbox => {
+                    checkbox.checked = true;
+                });
+            });
+        });
+        
+        // Deseleccionar todos los permisos de un modelo
+        document.querySelectorAll('.deselect-all-model').forEach(button => {
+            button.addEventListener('click', function() {
+                const model = this.getAttribute('data-model');
+                document.querySelectorAll(`.permission-checkbox[data-model="${model}"]`).forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,208 @@
+{% extends 'index.html' %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h4>{{ title }}</h4>
+        <div>
+            <a href="javascript:history.back()" class="btn btn-light">
+                <i class="fas fa-arrow-left"></i> {% trans 'Volver' %}
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if company %}
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>{% trans 'Información Básica' %}</h5>
+                    <div class="form-group">
+                        <label for="{{ form.name.id_for_label }}">{% trans 'Nombre de la Empresa' %}</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <div class="invalid-feedback d-block">{{ form.name.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group mt-2">
+                        <label for="{{ form.tax_id.id_for_label }}">{% trans 'NIT' %}</label>
+                        {{ form.tax_id }}
+                        {% if form.tax_id.errors %}
+                            <div class="invalid-feedback d-block">{{ form.tax_id.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group mt-2">
+                        <label for="{{ form.address.id_for_label }}">{% trans 'Dirección' %}</label>
+                        {{ form.address }}
+                        {% if form.address.errors %}
+                            <div class="invalid-feedback d-block">{{ form.address.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group mt-2">
+                        <label for="{{ form.phone.id_for_label }}">{% trans 'Teléfono' %}</label>
+                        {{ form.phone }}
+                        {% if form.phone.errors %}
+                            <div class="invalid-feedback d-block">{{ form.phone.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group mt-2">
+                        <label for="{{ form.email.id_for_label }}">{% trans 'Correo Electrónico' %}</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="invalid-feedback d-block">{{ form.email.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h5>{% trans 'Representante Legal' %}</h5>
+                    <div class="form-group">
+                        <label for="{{ form.legal_representative.id_for_label }}">{% trans 'Representante Legal' %}</label>
+                        {{ form.legal_representative }}
+                        {% if form.legal_representative.errors %}
+                            <div class="invalid-feedback d-block">{{ form.legal_representative.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group mt-2">
+                        <label for="{{ form.document_type.id_for_label }}">{% trans 'Tipo de Documento' %}</label>
+                        {{ form.document_type }}
+                        {% if form.document_type.errors %}
+                            <div class="invalid-feedback d-block">{{ form.document_type.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group mt-2">
+                        <label for="{{ form.representative_document.id_for_label }}">{% trans 'Documento del Representante' %}</label>
+                        {{ form.representative_document }}
+                        {% if form.representative_document.errors %}
+                            <div class="invalid-feedback d-block">{{ form.representative_document.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group mt-2">
+                        <label for="{{ form.representative_position.id_for_label }}">{% trans 'Cargo del Representante' %}</label>
+                        {{ form.representative_position }}
+                        {% if form.representative_position.errors %}
+                            <div class="invalid-feedback d-block">{{ form.representative_position.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <h5>{% trans 'Ubicación' %}</h5>
+                    <div class="form-group">
+                        <label for="{{ form.country.id_for_label }}">{% trans 'País' %}</label>
+                        {{ form.country }}
+                        {% if form.country.errors %}
+                            <div class="invalid-feedback d-block">{{ form.country.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group mt-2">
+                        <label for="{{ form.state.id_for_label }}">{% trans 'Departamento' %}</label>
+                        {{ form.state }}
+                        {% if form.state.errors %}
+                            <div class="invalid-feedback d-block">{{ form.state.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group mt-2">
+                        <label for="{{ form.city.id_for_label }}">{% trans 'Ciudad/Municipio' %}</label>
+                        {{ form.city }}
+                        {% if form.city.errors %}
+                            <div class="invalid-feedback d-block">{{ form.city.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h5>{% trans 'Información Bancaria' %}</h5>
+                    <div class="form-group">
+                        <label for="{{ form.payment_periodicity.id_for_label }}">{% trans 'Periodicidad de Pago' %}</label>
+                        {{ form.payment_periodicity }}
+                        {% if form.payment_periodicity.errors %}
+                            <div class="invalid-feedback d-block">{{ form.payment_periodicity.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group mt-2">
+                        <label for="{{ form.account_number.id_for_label }}">{% trans 'Número de Cuenta' %}</label>
+                        {{ form.account_number }}
+                        {% if form.account_number.errors %}
+                            <div class="invalid-feedback d-block">{{ form.account_number.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group mt-2">
+                        <label for="{{ form.bank_name.id_for_label }}">{% trans 'Banco' %}</label>
+                        {{ form.bank_name }}
+                        {% if form.bank_name.errors %}
+                            <div class="invalid-feedback d-block">{{ form.bank_name.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group mt-2">
+                        <label for="{{ form.account_type.id_for_label }}">{% trans 'Tipo de Cuenta' %}</label>
+                        {{ form.account_type }}
+                        {% if form.account_type.errors %}
+                            <div class="invalid-feedback d-block">{{ form.account_type.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <h5>{% trans 'Logo' %}</h5>
+                    <div class="form-group">
+                        <label for="{{ form.logo.id_for_label }}">{% trans 'Logo de la Empresa' %}</label>
+                        {{ form.logo }}
+                        {% if form.logo.errors %}
+                            <div class="invalid-feedback d-block">{{ form.logo.errors }}</div>
+                        {% endif %}
+                    </div>
+                    {% if company.logo %}
+                    <div class="mt-2">
+                        <img src="{{ company.logo.url }}" alt="Logo" class="img-thumbnail" style="max-height: 150px;">
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <h5>{% trans 'Estado' %}</h5>
+                    <div class="form-check mt-3">
+                        {{ form.is_active }}
+                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                            {% trans 'Activo' %}
+                        </label>
+                        {% if form.is_active.errors %}
+                            <div class="invalid-feedback d-block">{{ form.is_active.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex justify-content-between">
+                <div>
+                    <button type="submit" class="btn btn-primary">
+                        {% trans 'Actualizar Empresa' %}
+                    </button>
+                    <a href="javascript:history.back()" class="btn btn-secondary">{% trans 'Cancelar' %}</a>
+                </div>
+            </div>
+        </form>
+        {% else %}
+        <div class="alert alert-danger">
+            {% trans 'No se ha encontrado la empresa con ID 1.' %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

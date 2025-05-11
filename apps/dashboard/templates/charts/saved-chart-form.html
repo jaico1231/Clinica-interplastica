@@ -1,0 +1,1127 @@
+{% extends 'charts/base.html' %}
+
+{% block title %}{% if form.instance.pk %}Editar{% else %}Nuevo{% endif %} Gráfico | Dashboard{% endblock %}
+
+{% block page_title %}{% if form.instance.pk %}Editar "{{ form.instance.title }}"{% else %}Nuevo Gráfico{% endif %}{% endblock %}
+
+{% block page_actions %}
+{% if form.instance.pk %}
+<a href="{% url 'charts:saved_chart_list' %}" class="btn btn-outline-secondary me-2">
+    <i class="fas fa-arrow-left me-1"></i> Volver
+</a>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+    .select2-container--default .select2-selection--single {
+        height: 38px;
+        padding: 5px;
+        border: 1px solid #ced4da;
+    }
+    
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 38px;
+    }
+    
+    .color-swatch {
+        width: 24px;
+        height: 24px;
+        display: inline-block;
+        border-radius: 4px;
+        margin-right: 5px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: all 0.2s;
+    }
+    
+    .color-swatch.active {
+        border-color: #000;
+        transform: scale(1.1);
+    }
+    
+    .chart-preview-container {
+        height: 350px;
+        position: relative;
+        transition: all 0.3s;
+    }
+    
+    .form-tabs .nav-link {
+        color: #6c757d;
+    }
+    
+    .form-tabs .nav-link.active {
+        font-weight: bold;
+        color: #0d6efd;
+        border-bottom: 2px solid #0d6efd;
+    }
+    
+    .field-info {
+        background-color: #f8f9fa;
+        padding: 8px 12px;
+        border-radius: 4px;
+        margin-top: 5px;
+    }
+    
+    #filterBuilder {
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .filter-group {
+        margin-bottom: 10px;
+        padding: 10px;
+        border: 1px solid #e9ecef;
+        border-radius: 5px;
+        background-color: #f8f9fa;
+    }
+    
+    .filter-condition {
+        margin-bottom: 8px;
+        padding: 8px;
+        border: 1px solid #e9ecef;
+        border-radius: 5px;
+        background-color: #ffffff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" id="chartForm" class="needs-validation" novalidate>
+    {% csrf_token %}
+    
+    <div class="row">
+        <!-- Columna de formulario -->
+        <div class="col-md-7">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <!-- Pestañas para organizar el formulario -->
+                    <ul class="nav nav-tabs form-tabs mb-4" id="chartFormTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#basic-pane" type="button" role="tab" 
+                                    aria-controls="basic-pane" aria-selected="true">
+                                Información Básica
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="data-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#data-pane" type="button" role="tab" 
+                                    aria-controls="data-pane" aria-selected="false">
+                                Datos y Campos
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="filter-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#filter-pane" type="button" role="tab" 
+                                    aria-controls="filter-pane" aria-selected="false">
+                                Filtros
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="style-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#style-pane" type="button" role="tab" 
+                                    aria-controls="style-pane" aria-selected="false">
+                                Estilo
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <!-- Contenido de las pestañas -->
+                    <div class="tab-content" id="chartFormTabsContent">
+                        <!-- Pestaña de información básica -->
+                        <div class="tab-pane fade show active" id="basic-pane" role="tabpanel" aria-labelledby="basic-tab">
+                            <div class="mb-3">
+                                <label for="{{ form.title.id_for_label }}" class="form-label">Título *</label>
+                                {{ form.title }}
+                                {% if form.title.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.title.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.description.id_for_label }}" class="form-label">Descripción</label>
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.description.errors }}
+                                </div>
+                                {% endif %}
+                                <div class="form-text">Una breve descripción del propósito de este gráfico.</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.chart_type.id_for_label }}" class="form-label">Tipo de Gráfico *</label>
+                                {{ form.chart_type }}
+                                {% if form.chart_type.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.chart_type.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        {{ form.is_public }}
+                                        <label class="form-check-label" for="{{ form.is_public.id_for_label }}">
+                                            Gráfico público
+                                        </label>
+                                        <div class="form-text">Si está activado, todos los usuarios podrán ver este gráfico.</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        {{ form.is_favorite }}
+                                        <label class="form-check-label" for="{{ form.is_favorite.id_for_label }}">
+                                            Marcar como favorito
+                                        </label>
+                                        <div class="form-text">Si está activado, aparecerá en tu lista de favoritos.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Pestaña de datos y campos -->
+                        <div class="tab-pane fade" id="data-pane" role="tabpanel" aria-labelledby="data-tab">
+                            <div class="mb-3">
+                                <label for="{{ form.model_content_type.id_for_label }}" class="form-label">Modelo de Datos *</label>
+                                {{ form.model_content_type }}
+                                {% if form.model_content_type.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.model_content_type.errors }}
+                                </div>
+                                {% endif %}
+                                <div class="form-text">El modelo que proporciona los datos para este gráfico.</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.x_axis_field.id_for_label }}" class="form-label">Campo para Eje X *</label>
+                                {{ form.x_axis_field }}
+                                {% if form.x_axis_field.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.x_axis_field.errors }}
+                                </div>
+                                {% endif %}
+                                <div id="xAxisFieldInfo" class="field-info d-none">
+                                    <p class="mb-0"><strong>Tipo:</strong> <span class="field-type"></span></p>
+                                    <p class="mb-0 mt-1"><strong>Descripción:</strong> <span class="field-description">-</span></p>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.y_axis_field.id_for_label }}" class="form-label">Campo para Eje Y *</label>
+                                {{ form.y_axis_field }}
+                                {% if form.y_axis_field.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.y_axis_field.errors }}
+                                </div>
+                                {% endif %}
+                                <div class="form-text">Selecciona un campo numérico o "count" para contar registros.</div>
+                                <div id="yAxisFieldInfo" class="field-info d-none">
+                                    <p class="mb-0"><strong>Tipo:</strong> <span class="field-type"></span></p>
+                                    <p class="mb-0 mt-1"><strong>Descripción:</strong> <span class="field-description">-</span></p>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid gap-2 mt-4">
+                                <button type="button" class="btn btn-outline-primary" id="previewChartBtn">
+                                    <i class="fas fa-eye me-1"></i> Generar Vista Previa
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Pestaña de filtros -->
+                        <div class="tab-pane fade" id="filter-pane" role="tabpanel" aria-labelledby="filter-tab">
+                            <div id="filterBuilder">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="mb-0">Constructor de filtros</h6>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="addFilterBtn">
+                                        <i class="fas fa-plus me-1"></i> Añadir Condición
+                                    </button>
+                                </div>
+                                
+                                <div id="filterConditions">
+                                    <!-- Condiciones de filtro se añadirán aquí dinámicamente -->
+                                    <div class="alert alert-light text-center py-4" id="noFiltersMessage">
+                                        <i class="fas fa-filter text-muted fs-3 mb-2"></i>
+                                        <p>No hay filtros definidos. Añade condiciones para limitar los datos.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Campo oculto para almacenar la configuración JSON del filtro -->
+                            {{ form.filter_config }}
+                            
+                            <div class="d-grid gap-2 mt-4">
+                                <button type="button" class="btn btn-outline-primary" id="applyFiltersBtn">
+                                    <i class="fas fa-check me-1"></i> Aplicar Filtros y Actualizar Vista Previa
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Pestaña de estilo -->
+                        <div class="tab-pane fade" id="style-pane" role="tabpanel" aria-labelledby="style-tab">
+                            <div class="mb-3">
+                                <label class="form-label">Esquema de Colores</label>
+                                <div class="d-flex flex-wrap" id="colorSchemePicker">
+                                    <div class="color-swatch active" data-scheme="default" style="background-color: #4e79a7;"></div>
+                                    <div class="color-swatch" data-scheme="warm" style="background-color: #e15759;"></div>
+                                    <div class="color-swatch" data-scheme="cool" style="background-color: #59a14f;"></div>
+                                    <div class="color-swatch" data-scheme="pastel" style="background-color: #76b7b2;"></div>
+                                    <div class="color-swatch" data-scheme="dark" style="background-color: #283037;"></div>
+                                    <div class="color-swatch" data-scheme="bright" style="background-color: #edc949;"></div>
+                                </div>
+                                {{ form.color_scheme }}
+                            </div>
+                            
+                            <!-- Opciones específicas para cada tipo de gráfico -->
+                            <div class="chart-options">
+                                <div class="mb-3">
+                                    <label class="form-label">Título del Eje X</label>
+                                    <input type="text" class="form-control" id="xAxisTitle">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Título del Eje Y</label>
+                                    <input type="text" class="form-control" id="yAxisTitle">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Leyenda</label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="showLegend" checked>
+                                        <label class="form-check-label" for="showLegend">Mostrar leyenda</label>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Posición de la leyenda</label>
+                                    <select class="form-select" id="legendPosition">
+                                        <option value="top">Superior</option>
+                                        <option value="right">Derecha</option>
+                                        <option value="bottom" selected>Inferior</option>
+                                        <option value="left">Izquierda</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Campo oculto para almacenar la configuración JSON del gráfico -->
+                            {{ form.chart_config }}
+                        </div>
+                    </div>
+                    
+                    <!-- Botones de acción -->
+                    <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                        <a href="{% url 'charts:saved_chart_list' %}" class="btn btn-outline-secondary">
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> {% if form.instance.pk %}Actualizar{% else %}Guardar{% endif %} Gráfico
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Columna de vista previa -->
+        <div class="col-md-5">
+            <div class="card shadow-sm sticky-top" style="top: 1rem;">
+                <div class="card-header bg-transparent py-3">
+                    <h5 class="card-title mb-0">Vista Previa</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-preview-container">
+                        <canvas id="chartPreview"></canvas>
+                        <div id="previewPlaceholder" class="d-flex flex-column align-items-center justify-content-center h-100">
+                            <i class="fas fa-chart-line text-muted fs-1 mb-3"></i>
+                            <h5>Vista previa no disponible</h5>
+                            <p class="text-muted">Complete los campos necesarios y haga clic en "Generar Vista Previa".</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div id="dataInfo" class="d-none">
+                        <div class="d-flex justify-content-between text-muted">
+                            <span>Registros: <span id="recordCount">0</span></span>
+                            <span>Última actualización: <span id="lastUpdate">-</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    let chartInstance = null;
+    let availableFields = [];
+    let currentModelId = null;
+    let chartData = null;
+    
+    // Configurar Select2 para mejorar los selectores
+    $(document).ready(function() {
+        $('#id_chart_type, #id_model_content_type').select2();
+        
+        // Inicializar valores
+        {% if form.instance.pk %}
+        // Cargar valores existentes para edición
+        currentModelId = '{{ form.instance.model_content_type_id }}';
+        if (currentModelId) {
+            loadModelFields(currentModelId);
+        }
+        
+        const filterConfig = '{{ form.instance.filter_config|escapejs }}';
+        if (filterConfig && filterConfig !== 'null') {
+            try {
+                const parsedFilters = JSON.parse(filterConfig);
+                buildFilterUI(parsedFilters);
+            } catch (e) {
+                console.error("Error parsing filter config:", e);
+            }
+        }
+        
+        const chartConfig = '{{ form.instance.chart_config|escapejs }}';
+        if (chartConfig && chartConfig !== 'null') {
+            try {
+                const parsedConfig = JSON.parse(chartConfig);
+                loadChartConfig(parsedConfig);
+            } catch (e) {
+                console.error("Error parsing chart config:", e);
+            }
+        }
+        
+        // Cargar la vista previa
+        $('#previewChartBtn').trigger('click');
+        {% endif %}
+        
+        // Configuración del formulario
+        setupFormEvents();
+        setupFilterBuilder();
+        setupColorScheme();
+    });
+    
+    function setupFormEvents() {
+        // Manejar cambio de modelo
+        $('#id_model_content_type').change(function() {
+            const modelId = $(this).val();
+            if (modelId) {
+                loadModelFields(modelId);
+                currentModelId = modelId;
+            } else {
+                clearFieldSelects();
+            }
+        });
+        
+        // Actualizar la información de campo cuando se selecciona
+        $('#id_x_axis_field').change(function() {
+            updateFieldInfo($(this).val(), 'x');
+        });
+        
+        $('#id_y_axis_field').change(function() {
+            updateFieldInfo($(this).val(), 'y');
+        });
+        
+        // Vista previa del gráfico
+        $('#previewChartBtn').click(function() {
+            generateChartPreview();
+        });
+        
+        // Aplicar filtros y actualizar
+        $('#applyFiltersBtn').click(function() {
+            updateFilterConfig();
+            generateChartPreview();
+        });
+        
+        // Eventos para cambios de estilo
+        $('.chart-options input, .chart-options select').change(function() {
+            updateChartConfig();
+            updateChartStyle();
+        });
+        
+        // Actualizar el formulario antes de enviar
+        $('#chartForm').submit(function() {
+            updateFilterConfig();
+            updateChartConfig();
+            return true;
+        });
+    }
+    
+    function loadModelFields(modelId) {
+        // Limpiar selectores de campo
+        clearFieldSelects();
+        
+        // Mostrar indicador de carga
+        $('#id_x_axis_field, #id_y_axis_field').html('<option value="">Cargando campos...</option>');
+        
+        // Obtener campos del modelo
+        $.get(`{% url 'charts:model_fields' %}?content_type_id=${modelId}`, function(response) {
+            if (response.fields) {
+                availableFields = response.fields;
+                
+                // Actualizar selectores de campo
+                populateFieldSelects(response.fields);
+                
+                // Restaurar valores si editamos un gráfico existente
+                {% if form.instance.pk %}
+                $('#id_x_axis_field').val('{{ form.instance.x_axis_field }}');
+                $('#id_y_axis_field').val('{{ form.instance.y_axis_field }}');
+                updateFieldInfo('{{ form.instance.x_axis_field }}', 'x');
+                updateFieldInfo('{{ form.instance.y_axis_field }}', 'y');
+                {% endif %}
+            }
+        }).fail(function() {
+            alert('Error al cargar los campos del modelo');
+        });
+    }
+    
+    function clearFieldSelects() {
+        $('#id_x_axis_field, #id_y_axis_field').html('<option value="">Seleccione un campo</option>');
+        $('#xAxisFieldInfo, #yAxisFieldInfo').addClass('d-none');
+    }
+    
+    function populateFieldSelects(fields) {
+        // Generar HTML para opciones
+        let options = '<option value="">Seleccione un campo</option>';
+        fields.forEach(field => {
+            options += `<option value="${field.name}" data-type="${field.type}">${field.verbose_name || field.name}</option>`;
+        });
+        
+        // Añadir opción especial para contar
+        const yAxisOptions = options + '<option value="count" data-type="Count">Contar registros</option>';
+        
+        // Actualizar selectores
+        $('#id_x_axis_field').html(options);
+        $('#id_y_axis_field').html(yAxisOptions);
+        
+        // Convertir a Select2
+        $('#id_x_axis_field, #id_y_axis_field').select2();
+    }
+    
+    function updateFieldInfo(fieldName, axis) {
+        const infoElement = axis === 'x' ? '#xAxisFieldInfo' : '#yAxisFieldInfo';
+        
+        if (!fieldName) {
+            $(infoElement).addClass('d-none');
+            return;
+        }
+        
+        if (fieldName === 'count' && axis === 'y') {
+            $(infoElement).removeClass('d-none')
+                .find('.field-type').text('Agregación');
+            $(infoElement).find('.field-description').text('Cuenta el número de registros agrupados por el campo del eje X.');
+            return;
+        }
+        
+        const field = availableFields.find(f => f.name === fieldName);
+        if (field) {
+            $(infoElement).removeClass('d-none')
+                .find('.field-type').text(field.type);
+            $(infoElement).find('.field-description').text(field.verbose_name || 'No disponible');
+        } else {
+            $(infoElement).addClass('d-none');
+        }
+    }
+    
+    function generateChartPreview() {
+        const modelId = $('#id_model_content_type').val();
+        const xField = $('#id_x_axis_field').val();
+        const yField = $('#id_y_axis_field').val();
+        const chartTypeId = $('#id_chart_type').val();
+        const title = $('#id_title').val() || 'Vista previa';
+        
+        if (!modelId || !xField || !yField || !chartTypeId) {
+            $('#previewPlaceholder').show();
+            if (chartInstance) {
+                chartInstance.destroy();
+                chartInstance = null;
+            }
+            return;
+        }
+        
+        // Preparar datos para la solicitud
+        const requestData = {
+            model_content_type: modelId,
+            x_axis_field: xField,
+            y_axis_field: yField,
+            chart_type: getChartTypeCode(),
+            title: title
+        };
+        
+        // Añadir filtros si están definidos
+        const filterConfig = $('#id_filter_config').val();
+        if (filterConfig && filterConfig !== '{}') {
+            try {
+                requestData.filter_config = JSON.parse(filterConfig);
+            } catch (e) {
+                console.error("Error parsing filter config:", e);
+            }
+        }
+        
+        // Solicitud AJAX para obtener datos
+        $('#previewPlaceholder').html(`
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+                <p class="mt-2">Generando vista previa...</p>
+            </div>
+        `).show();
+        
+        $.ajax({
+            url: '{% url "charts:chart_preview" %}',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(requestData),
+            success: function(response) {
+                // Guardar datos para uso posterior
+                chartData = response;
+                
+                // Ocultar placeholder y mostrar información de datos
+                $('#previewPlaceholder').hide();
+                $('#dataInfo').removeClass('d-none');
+                $('#recordCount').text(response.data.length);
+                $('#lastUpdate').text(new Date().toLocaleTimeString());
+                
+                // Renderizar gráfico
+                renderChart(response);
+            },
+            error: function(xhr) {
+                let errorMsg = 'Error al generar la vista previa';
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.error) {
+                        errorMsg = response.error;
+                    }
+                } catch (e) {}
+                
+                $('#previewPlaceholder').html(`
+                    <div class="text-center">
+                        <i class="fas fa-exclamation-triangle text-danger fs-1 mb-3"></i>
+                        <h5>Error en la vista previa</h5>
+                        <p class="text-muted">${errorMsg}</p>
+                    </div>
+                `).show();
+            }
+        });
+    }
+    
+    function renderChart(data) {
+        const canvas = document.getElementById('chartPreview');
+        const ctx = canvas.getContext('2d');
+        
+        // Destruir instancia anterior si existe
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+        
+        // Preparar datos
+        const chartType = getChartTypeCode();
+        const chartConfig = buildChartConfig(data, chartType);
+        
+        // Crear nueva instancia
+        chartInstance = new Chart(ctx, chartConfig);
+    }
+    
+    function getChartTypeCode() {
+        const chartTypeId = $('#id_chart_type').val();
+        const chartTypeOption = $(`#id_chart_type option[value="${chartTypeId}"]`);
+        
+        // Intentar obtener el código del tipo de gráfico
+        const chartTypeText = chartTypeOption.text();
+        const codeMatch = chartTypeText.match(/\((.*?)\)/);
+        
+        if (codeMatch && codeMatch[1]) {
+            return codeMatch[1].toLowerCase();
+        }
+        
+        // Mapa de tipos de gráficos comunes
+        const typeMap = {
+            'Gráfico de barras': 'bar',
+            'Gráfico de líneas': 'line',
+            'Gráfico circular': 'pie',
+            'Gráfico de dispersión': 'scatter',
+            'Gráfico de área': 'area',
+            'Gráfico de donut': 'doughnut'
+        };
+        
+        return typeMap[chartTypeText] || 'bar';
+    }
+    
+    function buildChartConfig(data, chartType) {
+        // Obtener esquema de colores
+        const colorScheme = $('#id_color_scheme').val() || 'default';
+        const colors = getColorsForScheme(colorScheme, data.data.length);
+        
+        // Base de configuración
+        const config = {
+            type: chartType,
+            data: {
+                labels: data.data.map(item => item.label),
+                datasets: [{
+                    label: data.title,
+                    data: data.data.map(item => item.y),
+                    backgroundColor: colors,
+                    borderColor: chartType === 'line' ? colors[0] : colors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: $('#showLegend').is(':checked'),
+                        position: $('#legendPosition').val()
+                    },
+                    title: {
+                        display: true,
+                        text: data.title
+                    }
+                },
+                scales: {}
+            }
+        };
+        
+        // Añadir títulos de ejes si están definidos
+        const xAxisTitle = $('#xAxisTitle').val();
+        const yAxisTitle = $('#yAxisTitle').val();
+        
+        if (xAxisTitle) {
+            if (!config.options.scales.x) config.options.scales.x = {};
+            config.options.scales.x.title = {
+                display: true,
+                text: xAxisTitle
+            };
+        }
+        
+        if (yAxisTitle) {
+            if (!config.options.scales.y) config.options.scales.y = {};
+            config.options.scales.y.title = {
+                display: true,
+                text: yAxisTitle
+            };
+        }
+        
+        // Ajustes específicos según el tipo de gráfico
+        if (['pie', 'doughnut', 'polarArea'].includes(chartType)) {
+            // No necesita escalas para gráficos circulares
+            delete config.options.scales;
+        }
+        
+        // Añadir cualquier configuración adicional del objeto JSON
+        const savedConfig = $('#id_chart_config').val();
+        if (savedConfig && savedConfig !== '{}') {
+            try {
+                const parsedConfig = JSON.parse(savedConfig);
+                // Combinar opciones (no sobreescribir todo)
+                config.options = deepMerge(config.options, parsedConfig);
+            } catch (e) {
+                console.error("Error parsing chart config:", e);
+            }
+        }
+        
+        return config;
+    }
+    
+    function getColorsForScheme(scheme, count) {
+        const schemeColors = {
+            'default': ['#4e79a7', '#f28e2c', '#e15759', '#76b7b2', '#59a14f', '#edc949', '#af7aa1', '#ff9da7', '#9c755f', '#bab0ab'],
+            'warm': ['#e15759', '#ff9d9a', '#f9ae7e', '#f4a259', '#e97c62', '#bd4046', '#f27b53', '#b75651', '#d95043', '#e27071'],
+            'cool': ['#59a14f', '#76b7b2', '#4e79a7', '#6c9ebf', '#8cd17d', '#91c4a2', '#6ecbcc', '#5d8dbd', '#79c36a', '#82dabf'],
+            'pastel': ['#76b7b2', '#a2d9c4', '#ace5c0', '#c5e8b7', '#e7f0c3', '#fce1a8', '#fabf7b', '#f08c72', '#cf5a5a', '#a16a82'],
+            'dark': ['#283037', '#3b4550', '#4c5c68', '#5f788a', '#718ca1', '#8d9db5', '#a9bac8', '#c5d5de', '#e1eef6', '#f8f9fa'],
+            'bright': ['#edc949', '#f86b27', '#ffa600', '#ffcf74', '#aecf55', '#5f9ee5', '#73c3ff', '#9e86ff', '#ff83eb', '#ff7676']
+        };
+        
+        // Obtener el esquema seleccionado o el predeterminado
+        const colors = schemeColors[scheme] || schemeColors['default'];
+        
+        // Si hay más datos que colores, repetir colores
+        if (count > colors.length) {
+            const extendedColors = [];
+            for (let i = 0; i < count; i++) {
+                extendedColors.push(colors[i % colors.length]);
+            }
+            return extendedColors;
+        }
+        
+        // Devolver los colores necesarios
+        return colors.slice(0, count);
+    }
+    
+    function updateChartStyle() {
+        if (!chartInstance) return;
+        
+        // Actualizar opciones del gráfico
+        chartInstance.options.plugins.legend.display = $('#showLegend').is(':checked');
+        chartInstance.options.plugins.legend.position = $('#legendPosition').val();
+        
+        // Actualizar títulos de ejes
+        const xAxisTitle = $('#xAxisTitle').val();
+        const yAxisTitle = $('#yAxisTitle').val();
+        
+        if (chartInstance.options.scales && chartInstance.options.scales.x) {
+            chartInstance.options.scales.x.title = {
+                display: !!xAxisTitle,
+                text: xAxisTitle
+            };
+        }
+        
+        if (chartInstance.options.scales && chartInstance.options.scales.y) {
+            chartInstance.options.scales.y.title = {
+                display: !!yAxisTitle,
+                text: yAxisTitle
+            };
+        }
+        
+        // Actualizar esquema de colores
+        const colorScheme = $('#id_color_scheme').val() || 'default';
+        const colors = getColorsForScheme(colorScheme, chartInstance.data.labels.length);
+        
+        chartInstance.data.datasets.forEach(dataset => {
+            if (chartInstance.config.type === 'line') {
+                dataset.borderColor = colors[0];
+                dataset.backgroundColor = hexToRgba(colors[0], 0.2);
+            } else {
+                dataset.backgroundColor = colors;
+                dataset.borderColor = colors;
+            }
+        });
+        
+        chartInstance.update();
+    }
+    
+    function hexToRgba(hex, alpha) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+    
+    function setupFilterBuilder() {
+        // Botón para añadir filtro
+        $('#addFilterBtn').click(function() {
+            addFilterCondition();
+        });
+    }
+    
+    function addFilterCondition(field = '', operator = '=', value = '') {
+        // Ocultar mensaje de "no hay filtros"
+        $('#noFiltersMessage').hide();
+        
+        // Crear elemento para la condición de filtro
+        const conditionId = 'condition-' + Date.now();
+        const html = `
+            <div class="filter-condition" id="${conditionId}">
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <select class="form-select filter-field">
+                            <option value="">Seleccionar campo</option>
+                            ${availableFields.map(field => `
+                                <option value="${field.name}">${field.verbose_name || field.name}</option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select filter-operator">
+                            <option value="=">=</option>
+                            <option value="!=">≠</option>
+                            <option value=">">></option>
+                            <option value="<"><</option>
+                            <option value=">=">≥</option>
+                            <option value="<=">≤</option>
+                            <option value="contains">Contiene</option>
+                            <option value="startswith">Comienza con</option>
+                            <option value="endswith">Termina con</option>
+                            <option value="isnull">Es nulo</option>
+                            <option value="isnotnull">No es nulo</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <input type="text" class="form-control filter-value" placeholder="Valor">
+                    </div>
+                    <div class="col-md-1">
+                        <button type="button" class="btn btn-outline-danger remove-filter" 
+                                onclick="removeFilterCondition('${conditionId}')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Añadir al contenedor
+        $('#filterConditions').append(html);
+        
+        // Establecer valores si se proporcionan
+        if (field) {
+            $(`#${conditionId} .filter-field`).val(field);
+        }
+        if (operator) {
+            $(`#${conditionId} .filter-operator`).val(operator);
+        }
+        if (value !== '') {
+            $(`#${conditionId} .filter-value`).val(value);
+        }
+        
+        // Manejar cambios en el operador para mostrar/ocultar el campo de valor
+        $(`#${conditionId} .filter-operator`).change(function() {
+            const op = $(this).val();
+            if (op === 'isnull' || op === 'isnotnull') {
+                $(`#${conditionId} .filter-value`).hide();
+            } else {
+                $(`#${conditionId} .filter-value`).show();
+            }
+        });
+    }
+    
+    function removeFilterCondition(id) {
+        $(`#${id}`).remove();
+        
+        // Mostrar mensaje si no hay condiciones
+        if ($('.filter-condition').length === 0) {
+            $('#noFiltersMessage').show();
+        }
+    }
+    
+    function updateFilterConfig() {
+        const filters = {};
+        
+        // Recopilar todas las condiciones de filtro
+        $('.filter-condition').each(function() {
+            const field = $(this).find('.filter-field').val();
+            const operator = $(this).find('.filter-operator').val();
+            const value = $(this).find('.filter-value').val();
+            
+            if (field && operator) {
+                // Construir la clave de filtro según el operador
+                let filterKey = field;
+                
+                switch (operator) {
+                    case '=':
+                        // Usar campo directamente
+                        break;
+                    case '!=':
+                        filterKey += '__ne';
+                        break;
+                    case '>':
+                        filterKey += '__gt';
+                        break;
+                    case '<':
+                        filterKey += '__lt';
+                        break;
+                    case '>=':
+                        filterKey += '__gte';
+                        break;
+                    case '<=':
+                        filterKey += '__lte';
+                        break;
+                    case 'contains':
+                        filterKey += '__contains';
+                        break;
+                    case 'startswith':
+                        filterKey += '__startswith';
+                        break;
+                    case 'endswith':
+                        filterKey += '__endswith';
+                        break;
+                    case 'isnull':
+                        filterKey += '__isnull';
+                        filters[filterKey] = true;
+                        return; // Continuar con el siguiente filtro
+                    case 'isnotnull':
+                        filterKey += '__isnull';
+                        filters[filterKey] = false;
+                        return; // Continuar con el siguiente filtro
+                }
+                
+                // Añadir valor (convertir a número si es posible)
+                if (value !== undefined && operator !== 'isnull' && operator !== 'isnotnull') {
+                    if (!isNaN(value) && value !== '') {
+                        filters[filterKey] = parseFloat(value);
+                    } else {
+                        filters[filterKey] = value;
+                    }
+                }
+            }
+        });
+        
+        // Actualizar campo oculto con JSON
+        $('#id_filter_config').val(JSON.stringify(filters));
+    }
+    
+    function buildFilterUI(filters) {
+        // Limpiar condiciones existentes
+        $('#filterConditions').empty();
+        
+        // Recorrer filtros y crear UI
+        Object.entries(filters).forEach(([key, value]) => {
+            let field = key;
+            let operator = '=';
+            
+            // Extraer operador de la clave
+            if (key.includes('__')) {
+                const parts = key.split('__');
+                field = parts[0];
+                const suffix = parts[1];
+                
+                switch (suffix) {
+                    case 'ne':
+                        operator = '!=';
+                        break;
+                    case 'gt':
+                        operator = '>';
+                        break;
+                    case 'lt':
+                        operator = '<';
+                        break;
+                    case 'gte':
+                        operator = '>=';
+                        break;
+                    case 'lte':
+                        operator = '<=';
+                        break;
+                    case 'contains':
+                        operator = 'contains';
+                        break;
+                    case 'startswith':
+                        operator = 'startswith';
+                        break;
+                    case 'endswith':
+                        operator = 'endswith';
+                        break;
+                    case 'isnull':
+                        operator = value ? 'isnull' : 'isnotnull';
+                        value = '';
+                        break;
+                }
+            }
+            
+            // Añadir condición al UI
+            addFilterCondition(field, operator, value);
+        });
+        
+        // Si no hay filtros, mostrar mensaje
+        if (Object.keys(filters).length === 0) {
+            $('#noFiltersMessage').show();
+        } else {
+            $('#noFiltersMessage').hide();
+        }
+    }
+    
+    function setupColorScheme() {
+        // Manejar selección de esquema de colores
+        $('.color-swatch').click(function() {
+            $('.color-swatch').removeClass('active');
+            $(this).addClass('active');
+            
+            const scheme = $(this).data('scheme');
+            $('#id_color_scheme').val(scheme);
+            
+            if (chartInstance) {
+                updateChartStyle();
+            }
+        });
+        
+        // Establecer color activo si hay uno guardado
+        const savedScheme = $('#id_color_scheme').val();
+        if (savedScheme) {
+            $(`.color-swatch[data-scheme="${savedScheme}"]`).click();
+        }
+    }
+    
+    function updateChartConfig() {
+        // Crear objeto de configuración
+        const config = {
+            plugins: {
+                legend: {
+                    display: $('#showLegend').is(':checked'),
+                    position: $('#legendPosition').val()
+                }
+            }
+        };
+        
+        // Añadir títulos de ejes si están definidos
+        const xAxisTitle = $('#xAxisTitle').val();
+        const yAxisTitle = $('#yAxisTitle').val();
+        
+        if (xAxisTitle || yAxisTitle) {
+            config.scales = {};
+            
+            if (xAxisTitle) {
+                config.scales.x = {
+                    title: {
+                        display: true,
+                        text: xAxisTitle
+                    }
+                };
+            }
+            
+            if (yAxisTitle) {
+                config.scales.y = {
+                    title: {
+                        display: true,
+                        text: yAxisTitle
+                    }
+                };
+            }
+        }
+        
+        // Actualizar campo oculto
+        $('#id_chart_config').val(JSON.stringify(config));
+    }
+    
+    function loadChartConfig(config) {
+        // Cargar leyenda
+        if (config.plugins && config.plugins.legend) {
+            $('#showLegend').prop('checked', config.plugins.legend.display !== false);
+            $('#legendPosition').val(config.plugins.legend.position || 'bottom');
+        }
+        
+        // Cargar títulos de ejes
+        if (config.scales) {
+            if (config.scales.x && config.scales.x.title) {
+                $('#xAxisTitle').val(config.scales.x.title.text || '');
+            }
+            
+            if (config.scales.y && config.scales.y.title) {
+                $('#yAxisTitle').val(config.scales.y.title.text || '');
+            }
+        }
+    }
+    
+    // Función auxiliar para combinar objetos anidados
+    function deepMerge(target, source) {
+        const output = { ...target };
+        
+        if (isObject(target) && isObject(source)) {
+            Object.keys(source).forEach(key => {
+                if (isObject(source[key])) {
+                    if (!(key in target)) {
+                        Object.assign(output, { [key]: source[key] });
+                    } else {
+                        output[key] = deepMerge(target[key], source[key]);
+                    }
+                } else {
+                    Object.assign(output, { [key]: source[key] });
+                }
+            });
+        }
+        
+        return output;
+    }
+    
+    function isObject(item) {
+        return (item && typeof item === 'object' && !Array.isArray(item));
+    }
+</script>
+{% endblock %}

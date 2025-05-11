@@ -1,0 +1,457 @@
+{% extends 'index.html' %}
+{% load static %}
+{% load i18n %}
+{% load custom_filters %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block stylesheets %}
+<link href="https://cdn.datatables.net/v/bs5/dt-1.13.8/fh-3.4.0/datatables.min.css" rel="stylesheet">
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/fixedheader/3.4.0/js/dataTables.fixedHeader.min.js"></script>
+<style>
+    .principal {
+        margin-top: 60px;
+    }
+    .filter-section {
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+    .action-badge {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 5px;
+        color: white;
+        font-weight: bold;
+    }
+    .action-create {
+        background-color: #28a745;
+    }
+    .action-update {
+        background-color: #007bff;
+    }
+    .action-delete {
+        background-color: #dc3545;
+    }
+    .action-login {
+        background-color: #6610f2;
+    }
+    .action-logout {
+        background-color: #6c757d;
+    }
+    .action-view {
+        background-color: #17a2b8;
+    }
+    .action-other {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    .json-data {
+        max-height: 150px;
+        overflow-y: auto;
+        padding: 8px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        font-family: monospace;
+        font-size: 0.85rem;
+    }
+    .audit-table th {
+        vertical-align: middle;
+    }
+    .form-select, .form-control {
+        margin-bottom: 10px;
+    }
+    .btn-filter {
+        margin-top: 23px;
+    }
+    .pagination {
+        justify-content: center;
+        margin-top: 20px;
+    }
+    .diff-added {
+        background-color: #d4edda;
+    }
+    .diff-removed {
+        background-color: #f8d7da;
+    }
+    .diff-changed {
+        background-color: #fff3cd;
+    }
+    .json-field {
+        display: block;
+        padding: 2px 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card principal">
+            <div class="card-header card-header-primary">
+                <h4 class="card-title">{{ title }}</h4>
+            </div>
+            
+            <div class="card-body">
+                <!-- Filtros -->
+                <div class="filter-section">
+                    <form method="get" class="row">
+                        <div class="col-md-3">
+                            <label for="model">Modelo</label>
+                            <select name="model" id="model" class="form-select">
+                                <option value="">Todos los modelos</option>
+                                {% for model in audit_models %}
+                                <option value="{{ model.id }}" {% if current_filters.model == model.id %}selected{% endif %}>
+                                    {{ model.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            
+                            <label for="action">Tipo de acción</label>
+                            <select name="action" id="action" class="form-select">
+                                <option value="">Todas las acciones</option>
+                                {% for action in action_types %}
+                                <option value="{{ action.id }}" {% if current_filters.action == action.id %}selected{% endif %}>
+                                    {{ action.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="user">Usuario</label>
+                            <select name="user" id="user" class="form-select">
+                                <option value="">Todos los usuarios</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}" {% if current_filters.user == user.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ user.get_full_name|default:user.username }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            
+                            <label for="period">Período</label>
+                            <select name="period" id="period" class="form-select">
+                                <option value="">Personalizado</option>
+                                {% for period in periods %}
+                                <option value="{{ period.id }}" {% if current_filters.period == period.id %}selected{% endif %}>
+                                    {{ period.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="date_start">Fecha inicio</label>
+                            <input type="date" name="date_start" id="date_start" class="form-control"
+                                value="{{ current_filters.date_start|default:'' }}"
+                                {% if current_filters.period %}disabled{% endif %}>
+                                
+                            <label for="date_end">Fecha fin</label>
+                            <input type="date" name="date_end" id="date_end" class="form-control"
+                                value="{{ current_filters.date_end|default:'' }}"
+                                {% if current_filters.period %}disabled{% endif %}>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="search">Búsqueda</label>
+                            <input type="text" name="search" id="search" class="form-control" 
+                                placeholder="Buscar en descripción, usuario, etc..." 
+                                value="{{ current_filters.search|default:'' }}">
+                            
+                            <button type="submit" class="btn btn-primary w-100 btn-filter">
+                                <i class="material-icons">filter_list</i> Filtrar
+                            </button>
+                            {% if current_filters %}
+                            <a href="{% url 'auditoria:audit_log_list' %}" class="btn btn-outline-secondary w-100 mt-2">
+                                <i class="material-icons">clear</i> Limpiar filtros
+                            </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Tabla de resultados -->
+                <div class="table-responsive">
+                    <table class="table table-striped audit-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha y hora</th>
+                                <th>Usuario</th>
+                                <th>Acción</th>
+                                <th>Modelo</th>
+                                <th>ID</th>
+                                <th>Descripción</th>
+                                <th>IP</th>
+                                <th>Detalles</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in object_list %}
+                            <tr>
+                                <td>{{ item.timestamp|date:"d/m/Y H:i:s" }}</td>
+                                <td>
+                                    {% if item.user %}
+                                        {{ item.user.get_full_name|default:item.user.username }}
+                                    {% else %}
+                                        Sistema
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="action-badge action-{{ item.action|lower }}">
+                                        {{ item.get_action_display }}
+                                    </span>
+                                </td>
+                                <td>{% if item.content_type %}{{ item.content_type.app_label }}.{{ item.content_type.model|capfirst }}{% else %}-{% endif %}</td>
+                                <td>{{ item.object_id|default:"-" }}</td>
+                                <td>{{ item.description|default:"-" }}</td>
+                                <td>{{ item.ip_address|default:"-" }}</td>
+                                <td>
+                                    {% if item.data_before or item.data_after %}
+                                    <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#detailModal{{ item.id }}">
+                                        <i class="material-icons">visibility</i>
+                                    </button>
+                                    
+                                    <!-- Modal de detalles -->
+                                    <div class="modal fade" id="detailModal{{ item.id }}" tabindex="-1" aria-labelledby="detailModalLabel{{ item.id }}" aria-hidden="true">
+                                        <div class="modal-dialog modal-lg">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="detailModalLabel{{ item.id }}">Detalles de la acción</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div class="row">
+                                                        <div class="col-md-12 mb-3">
+                                                            <h6>Información general</h6>
+                                                            <table class="table table-sm">
+                                                                <tr>
+                                                                    <th>Acción:</th>
+                                                                    <td>{{ item.get_action_display }}</td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <th>Fecha y hora:</th>
+                                                                    <td>{{ item.timestamp|date:"d/m/Y H:i:s" }}</td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <th>Usuario:</th>
+                                                                    <td>
+                                                                        {% if item.user %}
+                                                                            {{ item.user.get_full_name|default:item.user.username }}
+                                                                        {% else %}
+                                                                            Sistema
+                                                                        {% endif %}
+                                                                    </td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <th>Modelo:</th>
+                                                                    <td>{% if item.content_type %}{{ item.content_type.app_label }}.{{ item.content_type.model|capfirst }}{% else %}-{% endif %}</td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <th>ID del objeto:</th>
+                                                                    <td>{{ item.object_id|default:"-" }}</td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <th>Descripción:</th>
+                                                                    <td>{{ item.description|default:"-" }}</td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <th>IP:</th>
+                                                                    <td>{{ item.ip_address|default:"-" }}</td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <th>User Agent:</th>
+                                                                    <td>{{ item.user_agent|default:"-" }}</td>
+                                                                </tr>
+                                                            </table>
+                                                        </div>
+                                                        
+                                                        {% if item.data_before %}
+                                                        <div class="col-md-6">
+                                                            <h6>Datos anteriores</h6>
+                                                            <div class="json-data">
+                                                                {% for key, value in item.data_before.items %}
+                                                                <span class="json-field">
+                                                                    <strong>{{ key }}:</strong> {{ value }}
+                                                                </span>
+                                                                {% endfor %}
+                                                            </div>
+                                                        </div>
+                                                        {% endif %}
+                                                        
+                                                        {% if item.data_after %}
+                                                        <div class="col-md-{% if item.data_before %}6{% else %}12{% endif %}">
+                                                            <h6>Datos nuevos</h6>
+                                                            <div class="json-data">
+                                                                {% for key, value in item.data_after.items %}
+                                                                <span class="json-field">
+                                                                    <strong>{{ key }}:</strong> {{ value }}
+                                                                </span>
+                                                                {% endfor %}
+                                                            </div>
+                                                        </div>
+                                                        {% endif %}
+                                                        
+                                                        {% if item.data_before and item.data_after %}
+                                                        <div class="col-md-12 mt-3">
+                                                            <h6>Cambios</h6>
+                                                            <div class="json-data">
+                                                                {% for key, value in item.data_after.items %}
+                                                                    {% if key in item.data_before %}
+                                                                        {% if value != item.data_before|get_item:key %}
+                                                                        <span class="json-field diff-changed">
+                                                                            <strong>{{ key }}:</strong> {{ item.data_before|get_item:key }} → {{ value }}
+                                                                        </span>
+                                                                        {% endif %}
+                                                                    {% else %}
+                                                                        <span class="json-field diff-added">
+                                                                            <strong>{{ key }}:</strong> {{ value }} (añadido)
+                                                                        </span>
+                                                                    {% endif %}
+                                                                {% endfor %}
+                                                                
+                                                                {% for key, value in item.data_before.items %}
+                                                                    {% if key not in item.data_after %}
+                                                                    <span class="json-field diff-removed">
+                                                                        <strong>{{ key }}:</strong> {{ value }} (eliminado)
+                                                                    </span>
+                                                                    {% endif %}
+                                                                {% endfor %}
+                                                            </div>
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <em>Sin datos</em>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center py-4">
+                                    <p class="text-muted">No se encontraron registros de auditoría que coincidan con los criterios.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Paginación -->
+                {% if is_paginated %}
+                <nav aria-label="Paginación" class="mt-4">
+                    <ul class="pagination">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% for key, value in current_filters.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Primera">
+                                <span aria-hidden="true">&laquo;&laquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in current_filters.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Anterior">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for num in paginator.page_range %}
+                            {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% for key, value in current_filters.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in current_filters.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Siguiente">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ paginator.num_pages }}{% for key, value in current_filters.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Última">
+                                <span aria-hidden="true">&raquo;&raquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar DataTable
+        var table = new DataTable('.audit-table', {
+            responsive: true,
+            columnDefs: [
+                { type: 'date', targets: 0 }
+            ],
+            language: {
+                url: 'http://cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish_Mexico.json'
+            },
+            paging: false,  // Desactivamos la paginación de DataTables porque usamos la de Django
+            info: false     // Desactivamos la información de DataTables
+        });
+        
+        // Mejoras en los filtros de fecha
+        var dateStart = document.getElementById('date_start');
+        var dateEnd = document.getElementById('date_end');
+        var periodSelect = document.getElementById('period');
+        
+        dateStart.addEventListener('change', function() {
+            if (dateStart.value) {
+                dateEnd.setAttribute('min', dateStart.value);
+            } else {
+                dateEnd.removeAttribute('min');
+            }
+        });
+        
+        dateEnd.addEventListener('change', function() {
+            if (dateEnd.value) {
+                dateStart.setAttribute('max', dateEnd.value);
+            } else {
+                dateStart.removeAttribute('max');
+            }
+        });
+        
+        // Al seleccionar un período predefinido, deshabilitar fechas personalizadas
+        periodSelect.addEventListener('change', function() {
+            var isPeriodSelected = periodSelect.value !== '';
+            dateStart.disabled = isPeriodSelected;
+            dateEnd.disabled = isPeriodSelected;
+            
+            if (isPeriodSelected) {
+                dateStart.value = '';
+                dateEnd.value = '';
+            }
+        });
+        
+        // Disparar el evento change para establecer restricciones iniciales
+        if (dateStart.value) {
+            dateStart.dispatchEvent(new Event('change'));
+        }
+        if (dateEnd.value) {
+            dateEnd.dispatchEvent(new Event('change'));
+        }
+    });
+</script>
+{% endblock %}

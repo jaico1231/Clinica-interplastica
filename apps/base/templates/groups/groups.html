@@ -1,0 +1,250 @@
+{% extends 'index.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block stylesheets %}
+<style>
+/* Estilos para los selectores de permisos */
+#id_permissions_to, #id_permissions_from {
+  min-height: 300px;
+}
+
+@media (max-width: 768px) {
+  #id_permissions_to, #id_permissions_from {
+    min-height: 150px;
+  }
+}
+
+/* Estilo para resaltar las opciones disponibles durante la búsqueda */
+.highlighted-option {
+  background-color: #e9f5ff;
+}
+
+/* Mejorar el aspecto del contenedor de los selectores */
+.permissions-container {
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 15px;
+  background-color: #f8f9fa;
+}
+</style>
+{% endblock stylesheets %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">{{ title }}</h6>
+        </div>
+        <div class="card-body">
+            <form method="post" id="group-form">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label for="group-name" class="form-label">Nombre del Grupo:</label>
+                    <input type="text" class="form-control" id="group-name" name="name" value="{{ form.instance.name }}" required>
+                </div>
+
+                <div class="permissions-container mb-3">
+                    <label class="form-label fw-bold">Permisos:</label>
+
+                    <div class="row">
+                        <div class="col-md-5">
+                            <h6 class="text-muted">Permisos Disponibles</h6>
+                            <div class="input-group mb-2">
+                                <input type="text" placeholder="Filtrar permisos" id="id_permissions_input" class="form-control">
+                                <button type="button" id="id_permissions_clear" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <select multiple="multiple" id="id_permissions_from" class="form-control">
+                                {% for permission in all_permissions %}
+                                    {% if permission not in selected_permissions %}
+                                        <option value="{{ permission.pk }}" data-app="{{ permission.content_type.app_label }}" data-model="{{ permission.content_type.model }}">
+                                            {{ permission.content_type.app_label }} | {{ permission.content_type.model }} | {{ permission.name }}
+                                        </option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                            <div class="mt-2">
+                                <button type="button" id="id_permissions_add_all_link" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-angle-double-right"></i> Seleccionar todos
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="col-md-2 d-flex flex-md-column justify-content-center align-items-center my-2">
+                            <button type="button" id="id_permissions_add_link" class="btn btn-sm btn-primary mb-md-2 mx-1 mx-md-0">
+                                <i class="fas fa-angle-right"></i>
+                            </button>
+                            <button type="button" id="id_permissions_remove_link" class="btn btn-sm btn-danger">
+                                <i class="fas fa-angle-left"></i>
+                            </button>
+                        </div>
+
+                        <div class="col-md-5">
+                            <h6 class="text-muted">Permisos Asignados</h6>
+                            <div class="input-group mb-2">
+                                <input type="text" placeholder="Filtrar permisos asignados" id="id_permissions_selected_input" class="form-control">
+                                <button type="button" id="id_permissions_selected_clear" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <select multiple="multiple" id="id_permissions_to" name="permissions_to" class="form-control">
+                                {% for permission in selected_permissions %}
+                                    <option value="{{ permission.pk }}" data-app="{{ permission.content_type.app_label }}" data-model="{{ permission.content_type.model }}">
+                                        {{ permission.content_type.app_label }} | {{ permission.content_type.model }} | {{ permission.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="mt-2">
+                                <button type="button" id="id_permissions_remove_all_link" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-angle-double-left"></i> Quitar todos
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="form-text text-muted">
+                            <i class="fas fa-info-circle"></i> Mantenga presionado "Control" (o "Comando" en Mac) para seleccionar múltiples permisos.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" id="btnCancel" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block javascripts %}
+<script>
+$(document).ready(function() {
+    // Función para filtrar opciones en un select
+    function filterSelect(selectElement, inputElement) {
+        var query = $(inputElement).val().toLowerCase();
+        
+        if (!query) {
+            // Si no hay consulta, mostrar todas las opciones
+            $(selectElement + ' option').show();
+            $(selectElement + ' option').removeClass('highlighted-option');
+            return;
+        }
+        
+        $(selectElement + ' option').each(function() {
+            var text = $(this).text().toLowerCase();
+            var matches = text.indexOf(query) > -1;
+            
+            if (matches) {
+                $(this).show().addClass('highlighted-option');
+            } else {
+                $(this).hide().removeClass('highlighted-option');
+            }
+        });
+    }
+
+    // Transferir opciones seleccionadas de un select a otro
+    function moveOptions(fromSelect, toSelect) {
+        var selectedOptions = $(fromSelect + ' option:selected:visible');
+        
+        if (selectedOptions.length === 0) {
+            // Si no hay elementos seleccionados, mostrar una alerta
+            alert('Por favor, seleccione al menos un permiso para transferir.');
+            return;
+        }
+        
+        // Mover los elementos seleccionados
+        selectedOptions.appendTo(toSelect);
+        
+        // Ordenar las opciones en el select de destino
+        sortSelectOptions(toSelect);
+    }
+
+    // Ordenar opciones en un select
+    function sortSelectOptions(selectElement) {
+        var options = $(selectElement + ' option');
+        options.sort(function(a, b) {
+            return $(a).text().localeCompare($(b).text());
+        });
+        $(selectElement).empty().append(options);
+    }
+
+    // Botones para mover permisos
+    $('#id_permissions_add_link').click(function(e) {
+        e.preventDefault();
+        moveOptions('#id_permissions_from', '#id_permissions_to');
+    });
+
+    $('#id_permissions_remove_link').click(function(e) {
+        e.preventDefault();
+        moveOptions('#id_permissions_to', '#id_permissions_from');
+    });
+
+    // Botones para mover todos los permisos
+    $('#id_permissions_add_all_link').click(function(e) {
+        e.preventDefault();
+        $('#id_permissions_from option:visible').prop('selected', true);
+        moveOptions('#id_permissions_from', '#id_permissions_to');
+    });
+
+    $('#id_permissions_remove_all_link').click(function(e) {
+        e.preventDefault();
+        $('#id_permissions_to option:visible').prop('selected', true);
+        moveOptions('#id_permissions_to', '#id_permissions_from');
+    });
+
+    // Filtros para permisos
+    $('#id_permissions_input').on('keyup', function() {
+        filterSelect('#id_permissions_from', this);
+    });
+
+    $('#id_permissions_selected_input').on('keyup', function() {
+        filterSelect('#id_permissions_to', this);
+    });
+
+    // Botones para limpiar filtros
+    $('#id_permissions_clear').click(function() {
+        $('#id_permissions_input').val('').trigger('keyup');
+    });
+
+    $('#id_permissions_selected_clear').click(function() {
+        $('#id_permissions_selected_input').val('').trigger('keyup');
+    });
+
+    // Antes de enviar el formulario, seleccionar todos los permisos en el select de destino
+    $('#group-form').submit(function() {
+        $('#id_permissions_to option').prop('selected', true);
+        return true;
+    });
+
+    // Inicializar ordenamiento de opciones
+    sortSelectOptions('#id_permissions_from');
+    sortSelectOptions('#id_permissions_to');
+
+    // Mejora: Doble clic para mover permisos
+    $('#id_permissions_from').on('dblclick', 'option', function() {
+        $(this).prop('selected', true);
+        moveOptions('#id_permissions_from', '#id_permissions_to');
+    });
+
+    $('#id_permissions_to').on('dblclick', 'option', function() {
+        $(this).prop('selected', true);
+        moveOptions('#id_permissions_to', '#id_permissions_from');
+    });
+    $('#btnCancel').click(function() {
+        // URL explícita en lugar de usar template vars
+        var listUrl = "{% url list_url %}";
+        window.location.href = listUrl;
+    });
+});
+
+</script>
+{% endblock javascripts %}

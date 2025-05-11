@@ -1,0 +1,39 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="card text-center">
+        <div class="card-header bg-warning text-dark">
+            <h3>{{ title }}</h3>
+        </div>
+        <div class="card-body py-5">
+            <div class="mb-4">
+                <i class="fas fa-exclamation-triangle text-warning" style="font-size: 5rem;"></i>
+            </div>
+            <h4 class="card-title mb-4">{{ message }}</h4>
+            <p class="card-text lead">{% trans 'La encuesta que está intentando acceder no está disponible en este momento.' %}</p>
+            
+            {% if messages %}
+            <div class="alert alert-warning mt-4">
+                {% for message in messages %}
+                <p>{{ message }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <div class="mt-5">
+                <a href="{% url 'home' %}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-home"></i> {% trans 'Volver al Inicio' %}
+                </a>
+            </div>
+        </div>
+        <div class="card-footer text-muted">
+            {% now "d/m/Y H:i" %}
+        </div>
+    </div>
+</div>
+{% endblock %}

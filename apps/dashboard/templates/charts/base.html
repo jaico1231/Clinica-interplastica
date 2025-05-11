@@ -1,0 +1,222 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard de Gráficos{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome para iconos -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    
+    <!-- CSRF token para las solicitudes AJAX -->
+    <script>
+        const CSRF_TOKEN = '{{ csrf_token }}';
+    </script>
+    
+    <!-- Estilos personalizados -->
+    <style>
+        :root {
+            --sidebar-width: 250px;
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            padding: 1rem;
+            background-color: #343a40;
+            color: white;
+            z-index: 100;
+        }
+        
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 1rem;
+        }
+        
+        .chart-card {
+            transition: all 0.3s ease;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .chart-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            grid-auto-rows: minmax(100px, auto);
+            gap: 15px;
+        }
+        
+        .widget {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .widget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .widget-content {
+            height: calc(100% - 40px);
+            width: 100%;
+        }
+        
+        .clickable {
+            cursor: pointer;
+        }
+        
+        .badge-chart-type {
+            background-color: #6c757d;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+        }
+        
+        @media (max-width: 992px) {
+            .sidebar {
+                width: 60px;
+                overflow: hidden;
+            }
+            
+            .sidebar .nav-link span {
+                display: none;
+            }
+            
+            .main-content {
+                margin-left: 60px;
+            }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-light">
+    <!-- Barra lateral -->
+    {% include 'charts/sidebar.html' %}
+    
+    <!-- Contenido principal -->
+    <main class="main-content">
+        <!-- Barra de navegación superior -->
+        {% include 'charts/navbar.html' %}
+        
+        <!-- Contenedor del contenido -->
+        <div class="container-fluid mt-4">
+            <!-- Alertas y notificaciones -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            
+            <!-- Título de la página -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2">{% block page_title %}Panel de Control{% endblock %}</h1>
+                <div>
+                    {% block page_actions %}{% endblock %}
+                </div>
+            </div>
+            
+            <!-- Contenido específico de la página -->
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+    
+    <!-- Bootstrap 5 y Popper JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+    
+    <!-- jQuery (algunas funciones son más simples con jQuery) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- GridStack.js para dashboards responsive -->
+    <link href="https://cdn.jsdelivr.net/npm/gridstack@7.2.1/dist/gridstack.min.css" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/gridstack@7.2.1/dist/gridstack-all.js"></script>
+    
+    <!-- Scripts globales -->
+    <script>
+        // Inicializar tooltips de Bootstrap
+        document.addEventListener('DOMContentLoaded', function() {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            });
+        });
+        
+        // Función para enviar solicitudes AJAX con CSRF
+        function sendAjaxRequest(url, method, data, successCallback, errorCallback) {
+            $.ajax({
+                url: url,
+                type: method,
+                data: JSON.stringify(data),
+                contentType: 'application/json',
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader('X-CSRFToken', CSRF_TOKEN);
+                },
+                success: function(response) {
+                    if (successCallback) successCallback(response);
+                },
+                error: function(xhr, status, error) {
+                    if (errorCallback) errorCallback(xhr, status, error);
+                    else console.error('Error en la solicitud AJAX:', error);
+                }
+            });
+        }
+        
+        // Helpers para gráficos
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+        
+        function getColorScheme(count) {
+            const baseColors = [
+                '#4e79a7', '#f28e2c', '#e15759', '#76b7b2', '#59a14f',
+                '#edc949', '#af7aa1', '#ff9da7', '#9c755f', '#bab0ab'
+            ];
+            
+            if (count <= baseColors.length) {
+                return baseColors.slice(0, count);
+            }
+            
+            // Generar colores adicionales si son necesarios
+            const colors = [...baseColors];
+            for (let i = baseColors.length; i < count; i++) {
+                colors.push(getRandomColor());
+            }
+            return colors;
+        }
+    </script>
+    
+    <!-- Scripts específicos de la página -->
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

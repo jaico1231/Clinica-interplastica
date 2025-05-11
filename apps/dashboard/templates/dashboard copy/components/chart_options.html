@@ -1,0 +1,64 @@
+{% comment %}
+  dashboard/templates/dashboard/components/chart_options.html
+  Componente para opciones avanzadas de gráficos
+{% endcomment %}
+
+<div class="card mb-3">
+  <div class="card-header">
+    <h5 class="card-title mb-0">Opciones avanzadas</h5>
+  </div>
+  <div class="card-body">
+    <div class="mb-3">
+      <label for="aggregationFunction" class="form-label">Función de agregación</label>
+      <select class="form-select" id="aggregationFunction" name="aggregate">
+        <option value="count">Conteo</option>
+        <option value="sum">Suma</option>
+        <option value="avg">Promedio</option>
+        <option value="min">Mínimo</option>
+        <option value="max">Máximo</option>
+      </select>
+      <small class="form-text text-muted">Define cómo se agregan los datos para visualización.</small>
+    </div>
+    
+    <div class="mb-3 d-none" id="timeIntervalContainer">
+      <label for="timeInterval" class="form-label">Intervalo de tiempo</label>
+      <select class="form-select" id="timeInterval" name="date_interval">
+        <option value="day">Día</option>
+        <option value="week">Semana</option>
+        <option value="month" selected>Mes</option>
+        <option value="quarter">Trimestre</option>
+        <option value="year">Año</option>
+      </select>
+      <small class="form-text text-muted">Para datos temporales, define cómo agrupar fechas.</small>
+    </div>
+    
+    <div class="mb-3">
+      <label for="limitResults" class="form-label">Límite de resultados</label>
+      <input type="number" class="form-control" id="limitResults" name="limit" min="1" max="100" value="50">
+      <small class="form-text text-muted">Número máximo de elementos a mostrar.</small>
+    </div>
+    
+    <div class="mb-3" id="groupByContainer">
+      <label for="groupByField" class="form-label">Agrupar por</label>
+      <select class="form-select" id="groupByField" name="group_by">
+        <option value="">Sin agrupación</option>
+        <!-- Los campos se llenarán dinámicamente con JavaScript -->
+      </select>
+      <small class="form-text text-muted">Campo adicional para dividir los datos en series.</small>
+    </div>
+    
+    <div class="mb-3">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="enableAnimation" checked>
+        <label class="form-check-label" for="enableAnimation">Habilitar animaciones</label>
+      </div>
+    </div>
+    
+    <div class="mb-3">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="showDataLabels">
+        <label class="form-check-label" for="showDataLabels">Mostrar etiquetas de datos</label>
+      </div>
+    </div>
+  </div>
+</div>

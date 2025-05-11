@@ -1,0 +1,270 @@
+{% extends 'surveys/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - {{ survey.title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.css">
+<style>
+    .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+        margin-bottom: 2rem;
+    }
+    .indicator-card {
+        transition: transform 0.2s;
+    }
+    .indicator-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block header %}
+    Dashboard: {{ survey.title }}
+    <div class="float-end">
+        <a href="{% url 'surveys:survey_detail' survey.pk %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver a la Encuesta
+        </a>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Resumen</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card bg-light indicator-card">
+                                <div class="card-body text-center">
+                                    <h3 class="display-4">{{ total_responses }}</h3>
+                                    <p class="text-muted">Respuestas Totales</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light indicator-card">
+                                <div class="card-body text-center">
+                                    <h3 class="display-4">{{ survey.question_count }}</h3>
+                                    <p class="text-muted">Preguntas</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h6 class="mb-3">Respuestas recientes:</h6>
+                        <ul class="list-group">
+                            {% for response in recent_responses %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-user-circle text-primary"></i>
+                                        {% if response.respondent %}
+                                            {{ response.respondent }}
+                                        {% elif response.respondent_email %}
+                                            {{ response.respondent_email }}
+                                        {% else %}
+                                            Anónimo
+                                        {% endif %}
+                                        <small class="text-muted ms-2">
+                                            {{ response.created_at|date:"d/m/Y H:i" }}
+                                        </small>
+                                    </div>
+                                    <a href="{% url 'surveys:response_detail' response.pk %}" class="btn btn-sm btn-outline-primary">
+                                        Ver detalle
+                                    </a>
+                                </li>
+                            {% empty %}
+                                <li class="list-group-item text-center text-muted">
+                                    No hay respuestas recientes.
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">Resumen Gráfico</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="responseOverTime"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Indicadores -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Indicadores</h5>
+            <a href="{% url 'surveys:calculate_indicators' %}" class="btn btn-sm btn-light">
+                <i class="fas fa-sync-alt"></i> Actualizar Indicadores
+            </a>
+        </div>
+        <div class="card-body">
+            {% if indicators %}
+                <div class="row">
+                    {% regroup indicators by category as category_list %}
+                    
+                    {% for category in category_list %}
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">{{ category.grouper }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container">
+                                        <canvas id="chart-{{ forloop.counter }}"></canvas>
+                                    </div>
+                                    
+                                    <table class="table table-sm table-striped mt-3">
+                                        <thead>
+                                            <tr>
+                                                <th>Indicador</th>
+                                                <th>Valor</th>
+                                                <th>%</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for indicator in category.list %}
+                                                <tr>
+                                                    <td>{{ indicator.name }}</td>
+                                                    <td>{{ indicator.count_value }}</td>
+                                                    <td>
+                                                        {% if indicator.percentage_value is not None %}
+                                                            {{ indicator.percentage_value|floatformat:1 }}%
+                                                        {% else %}
+                                                            -
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    No hay indicadores calculados para esta encuesta. 
+                    <a href="{% url 'surveys:calculate_indicators' %}">Calcular indicadores</a>.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Gráfico de respuestas en el tiempo (simulado - sería generado dinámicamente por el backend)
+        const ctxTime = document.getElementById('responseOverTime').getContext('2d');
+        new Chart(ctxTime, {
+            type: 'line',
+            data: {
+                labels: ['Hace 7 días', 'Hace 6 días', 'Hace 5 días', 'Hace 4 días', 'Hace 3 días', 'Hace 2 días', 'Ayer', 'Hoy'],
+                datasets: [{
+                    label: 'Respuestas',
+                    data: [
+                        {% if total_responses > 0 %}
+                            {{ total_responses|divisibleby:8 }}, 
+                            {{ total_responses|divisibleby:7 }}, 
+                            {{ total_responses|divisibleby:6 }}, 
+                            {{ total_responses|divisibleby:5 }}, 
+                            {{ total_responses|divisibleby:4 }}, 
+                            {{ total_responses|divisibleby:3 }}, 
+                            {{ total_responses|divisibleby:2 }}, 
+                            {{ total_responses }}
+                        {% else %}
+                            0, 0, 0, 0, 0, 0, 0, 0
+                        {% endif %}
+                    ],
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 2,
+                    lineTension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: true,
+                            callback: function(value) {
+                                if (value % 1 === 0) {
+                                    return value;
+                                }
+                            }
+                        }
+                    }]
+                }
+            }
+        });
+        
+        // Gráficos para cada categoría de indicadores
+        {% regroup indicators by category as category_list %}
+        {% for category in category_list %}
+            const ctx{{ forloop.counter }} = document.getElementById('chart-{{ forloop.counter }}').getContext('2d');
+            
+            new Chart(ctx{{ forloop.counter }}, {
+                type: 'pie',
+                data: {
+                    labels: [
+                        {% for indicator in category.list %}
+                            '{{ indicator.name }}',
+                        {% endfor %}
+                    ],
+                    datasets: [{
+                        data: [
+                            {% for indicator in category.list %}
+                                {{ indicator.count_value }},
+                            {% endfor %}
+                        ],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.7)',
+                            'rgba(54, 162, 235, 0.7)',
+                            'rgba(255, 206, 86, 0.7)',
+                            'rgba(75, 192, 192, 0.7)',
+                            'rgba(153, 102, 255, 0.7)',
+                            'rgba(255, 159, 64, 0.7)',
+                            'rgba(199, 199, 199, 0.7)',
+                            'rgba(83, 102, 255, 0.7)',
+                            'rgba(40, 159, 64, 0.7)',
+                            'rgba(210, 199, 199, 0.7)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 15,
+                            padding: 10
+                        }
+                    }
+                }
+            });
+        {% endfor %}
+    });
+</script>
+{% endblock %}

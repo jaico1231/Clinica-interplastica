@@ -1,0 +1,326 @@
+{% extends 'surveys/base.html' %}
+{% load static %}
+{% load i18n %}
+{% load widget_tweaks %}
+
+{% block title %}{{ survey.title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Encabezado de la encuesta -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>{{ survey.title }}</h3>
+        </div>
+        <div class="card-body">
+            <div class="survey-description mb-4">
+                {{ survey.description|safe }}
+            </div>
+
+            {% if messages %}
+            <div class="messages mb-4">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Fecha de vigencia -->
+            <div class="survey-dates mb-4">
+                <p class="text-muted">
+                    <i class="fas fa-calendar"></i>
+                    {% if survey.start_date and survey.end_date %}
+                        {% trans 'Disponible desde' %} {{ survey.start_date|date:"d/m/Y" }} {% trans 'hasta' %} {{ survey.end_date|date:"d/m/Y" }}
+                    {% elif survey.start_date %}
+                        {% trans 'Disponible desde' %} {{ survey.start_date|date:"d/m/Y" }}
+                    {% elif survey.end_date %}
+                        {% trans 'Disponible hasta' %} {{ survey.end_date|date:"d/m/Y" }}
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Formulario de respuesta -->
+    <div class="card">
+        <div class="card-body">
+            {% if not questions %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> 
+                {% trans 'Esta encuesta no tiene preguntas disponibles.' %}
+            </div>
+            {% else %}
+            <form method="post" class="survey-form needs-validation" novalidate>
+                {% csrf_token %}
+                
+                <!-- Campos para información del encuestado (solo para respuestas anónimas) -->
+                {% if not user.is_authenticated %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>{% trans 'Información del Encuestado' %}</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.respondent_name.id_for_label }}" class="form-label">{% trans 'Nombre' %}</label>
+                                {% if form.respondent_name %}
+                                    {{ form.respondent_name|add_class:"form-control" }}
+                                {% else %}
+                                    <input type="text" class="form-control" id="respondent_name" name="respondent_name">
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.respondent_email.id_for_label }}" class="form-label">{% trans 'Email' %}</label>
+                                {% if form.respondent_email %}
+                                    {{ form.respondent_email|add_class:"form-control" }}
+                                {% else %}
+                                    <input type="email" class="form-control" id="respondent_email" name="respondent_email">
+                                {% endif %}
+                                <div class="form-text">{% trans 'Su correo electrónico no será compartido con terceros.' %}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Preguntas de la encuesta -->
+                {% for question in questions %}
+                <div class="question-container mb-4" 
+                     id="question-{{ question.id }}" 
+                     {% if question.dependent_on %}
+                         data-dependent-on="question-{{ question.dependent_on.id }}"
+                         data-dependent-value="{{ question.dependent_value }}"
+                         style="display: none;"
+                     {% endif %}>
+                    <div class="card">
+                        <div class="card-header {% if question.is_required %}required-question{% endif %}">
+                            <h5>{{ question.order }}. {{ question.text }}</h5>
+                            {% if question.help_text %}
+                            <small class="text-muted">{{ question.help_text }}</small>
+                            {% endif %}
+                            {% if question.is_required %}
+                            <span class="badge bg-danger" title="{% trans 'Esta pregunta debe ser respondida' %}">{% trans 'Obligatorio' %}</span>
+                            {% endif %}
+                        </div>
+                        <div class="card-body">
+                            <!-- Renderizar el tipo de pregunta adecuado -->
+                            {% if question.question_type.name == 'TEXT' %}
+                            <input type="text" class="form-control" name="{{ question.id }}" placeholder="{% trans 'Respuesta breve' %}" {% if question.is_required %}required{% endif %}>
+                            
+                            {% elif question.question_type.name == 'TEXT_AREA' %}
+                            <textarea class="form-control" name="{{ question.id }}" rows="3" placeholder="{% trans 'Respuesta detallada' %}" {% if question.is_required %}required{% endif %}></textarea>
+                            
+                            {% elif question.question_type.name == 'SINGLE_CHOICE' %}
+                            <div class="options-container">
+                                {% for choice in question.choices.all %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="{{ question.id }}" id="choice_{{ choice.id }}" value="{{ choice.value }}" {% if question.is_required %}required{% endif %}>
+                                    <label class="form-check-label" for="choice_{{ choice.id }}" title="{{ choice.text }}">
+                                        {{ choice.text }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            {% elif question.question_type.name == 'MULTIPLE_CHOICE' %}
+                            <div class="options-container">
+                                {% for choice in question.choices.all %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="{{ question.id }}" id="choice_{{ choice.id }}" value="{{ choice.value }}">
+                                    <label class="form-check-label" for="choice_{{ choice.id }}" title="{{ choice.text }}">
+                                        {{ choice.text }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% if question.is_required %}
+                            <input type="hidden" class="multiple-choice-validator" data-name="{{ question.id }}" required>
+                            {% endif %}
+                            
+                            {% elif question.question_type.name == 'RATING' %}
+                            <div class="rating-container">
+                                {% for choice in question.choices.all %}
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="{{ question.id }}" id="rating_{{ choice.id }}" value="{{ choice.value }}" {% if question.is_required %}required{% endif %}>
+                                    <label class="form-check-label" for="rating_{{ choice.id }}" title="{{ choice.text }}">
+                                        {{ choice.text }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            {% elif question.question_type.name == 'DATE' %}
+                            <input type="date" class="form-control" name="{{ question.id }}" {% if question.is_required %}required{% endif %}>
+                            
+                            {% elif question.question_type.name == 'NUMBER' %}
+                            <input type="number" class="form-control" name="{{ question.id }}" step="any" 
+                                   {% if question.min_value is not None %}min="{{ question.min_value }}"{% endif %}
+                                   {% if question.max_value is not None %}max="{{ question.max_value }}"{% endif %}
+                                   {% if question.is_required %}required{% endif %}>
+                            
+                            {% elif question.question_type.name == 'YES_NO' %}
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="{{ question.id }}" id="yes_{{ question.id }}" value="YES" {% if question.is_required %}required{% endif %}>
+                                <label class="form-check-label" for="yes_{{ question.id }}" title="{% trans 'Sí' %}">
+                                    {% trans 'Sí' %}
+                                </label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="{{ question.id }}" id="no_{{ question.id }}" value="NO">
+                                <label class="form-check-label" for="no_{{ question.id }}" title="{% trans 'No' %}">
+                                    {% trans 'No' %}
+                                </label>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <!-- Botón de enviar -->
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg" title="{% trans 'Enviar sus respuestas a la encuesta' %}">
+                        <i class="fas fa-paper-plane"></i> {% trans 'Enviar Respuesta' %}
+                    </button>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extrajs %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Marcar preguntas requeridas visualmente
+        $('.required-question').each(function() {
+            $(this).addClass('border-danger border-start border-4');
+        });
+        
+        // Validación para preguntas de opción múltiple
+        document.querySelectorAll('.multiple-choice-validator').forEach(validator => {
+            const checkboxName = validator.getAttribute('data-name');
+            const checkboxes = document.querySelectorAll(`input[type="checkbox"][name="${checkboxName}"]`);
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const checkedCount = document.querySelectorAll(`input[type="checkbox"][name="${checkboxName}"]:checked`).length;
+                    if (checkedCount > 0) {
+                        validator.setCustomValidity('');
+                    } else {
+                        validator.setCustomValidity('{% trans "Por favor, seleccione al menos una opción." %}');
+                    }
+                });
+            });
+        });
+        
+        // Lógica para preguntas condicionales
+        function handleConditionalQuestions() {
+            const allQuestions = document.querySelectorAll('.question-container[data-dependent-on]');
+            
+            allQuestions.forEach(question => {
+                const dependsOnId = question.getAttribute('data-dependent-on');
+                const dependentValue = question.getAttribute('data-dependent-value');
+                const dependsOnElement = document.getElementById(dependsOnId);
+                
+                if (dependsOnElement) {
+                    // Identificar el tipo de campo en la pregunta de la que depende
+                    const dependentInputs = dependsOnElement.querySelectorAll('input, select, textarea');
+                    
+                    dependentInputs.forEach(input => {
+                        input.addEventListener('change', function() {
+                            updateConditionalVisibility(question, dependsOnElement, dependentValue);
+                        });
+                    });
+                    
+                    // Evaluar estado inicial
+                    updateConditionalVisibility(question, dependsOnElement, dependentValue);
+                }
+            });
+        }
+        
+        function updateConditionalVisibility(question, dependsOnElement, dependentValue) {
+            let shouldShow = false;
+            
+            // Radio buttons o checkboxes
+            const checkedInputs = dependsOnElement.querySelectorAll('input[type="radio"]:checked, input[type="checkbox"]:checked');
+            if (checkedInputs.length > 0) {
+                checkedInputs.forEach(input => {
+                    if (input.value === dependentValue) {
+                        shouldShow = true;
+                    }
+                });
+            }
+            
+            // Select
+            const selectInputs = dependsOnElement.querySelectorAll('select');
+            if (selectInputs.length > 0) {
+                selectInputs.forEach(select => {
+                    if (select.value === dependentValue) {
+                        shouldShow = true;
+                    }
+                });
+            }
+            
+            // Campos de texto, etc.
+            const textInputs = dependsOnElement.querySelectorAll('input[type="text"], input[type="number"], textarea');
+            if (textInputs.length > 0) {
+                textInputs.forEach(input => {
+                    if (input.value === dependentValue) {
+                        shouldShow = true;
+                    }
+                });
+            }
+            
+            // Actualizar visibilidad
+            if (shouldShow) {
+                question.style.display = 'block';
+                
+                // Habilitar campos requeridos
+                const requiredInputs = question.querySelectorAll('[required]');
+                requiredInputs.forEach(input => {
+                    input.disabled = false;
+                });
+            } else {
+                question.style.display = 'none';
+                
+                // Deshabilitar campos requeridos para evitar errores de validación
+                const requiredInputs = question.querySelectorAll('[required]');
+                requiredInputs.forEach(input => {
+                    input.disabled = true;
+                });
+            }
+        }
+        
+        // Inicializar lógica condicional
+        if (document.querySelector('.question-container[data-dependent-on]')) {
+            handleConditionalQuestions();
+        }
+        
+        // Validación del formulario
+        const form = document.querySelector('form.needs-validation');
+        if (form) {
+            form.addEventListener('submit', function(event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    
+                    // Desplazarse al primer error
+                    const firstInvalid = form.querySelector(':invalid');
+                    if (firstInvalid) {
+                        const questionContainer = firstInvalid.closest('.question-container');
+                        if (questionContainer) {
+                            questionContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }
+                }
+                
+                form.classList.add('was-validated');
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,90 @@
+{% extends 'surveys/base.html' %}
+
+{% block title %}Calcular Indicadores{% endblock %}
+
+{% block header %}Calcular Indicadores{% endblock %}
+
+{% block content %}
+    <div class="card">
+        <div class="card-body">
+            <p class="lead">Esta herramienta le permite calcular indicadores basados en las respuestas recibidas para una encuesta específica en un periodo determinado.</p>
+            
+            <form method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label for="id_period" class="form-label">Seleccione el Periodo:</label>
+                        <select name="period" id="id_period" class="form-select" required>
+                            <option value="">-- Seleccione un periodo --</option>
+                            {% for period in periods %}
+                                <option value="{{ period.id }}">{{ period }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="invalid-feedback">
+                            Por favor seleccione un periodo.
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="id_survey" class="form-label">Seleccione la Encuesta:</label>
+                        <select name="survey" id="id_survey" class="form-select" required>
+                            <option value="">-- Seleccione una encuesta --</option>
+                            {% for survey in surveys %}
+                                <option value="{{ survey.id }}">{{ survey.title }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="invalid-feedback">
+                            Por favor seleccione una encuesta.
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Los indicadores se calcularán basados en todas las respuestas completadas dentro del periodo seleccionado para la encuesta elegida.
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'surveys:indicator_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Ver Indicadores Existentes
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-calculator"></i> Calcular Indicadores
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Activar validación de Bootstrap
+    (function() {
+        'use strict';
+        
+        // Fetch all forms we want to apply validation to
+        var forms = document.querySelectorAll('.needs-validation');
+        
+        // Loop and prevent submission
+        Array.prototype.slice.call(forms).forEach(function(form) {
+            form.addEventListener('submit', function(event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                
+                form.classList.add('was-validated');
+            }, false);
+        });
+    })();
+</script>
+{% endblock %}

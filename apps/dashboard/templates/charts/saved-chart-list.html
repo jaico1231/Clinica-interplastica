@@ -1,0 +1,670 @@
+{% extends 'charts/base.html' %}
+
+{% block title %}Mis Gráficos | Dashboard{% endblock %}
+
+{% block page_title %}Mis Gráficos{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'charts:saved_chart_create' %}" class="btn btn-primary">
+    <i class="fas fa-plus me-1"></i> Nuevo Gráfico
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <!-- Filtros -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <form method="get" id="filterForm" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="chart_type" class="form-label">Tipo de gráfico</label>
+                        <select name="chart_type" id="chart_type" class="form-select">
+                            <option value="">Todos los tipos</option>
+                            {% for type in chart_types %}
+                            <option value="{{ type.id }}" {% if request.GET.chart_type == type.id|stringformat:"i" %}selected{% endif %}>
+                                {{ type.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="search" class="form-label">Buscar</label>
+                        <input type="text" class="form-control" id="search" name="search" 
+                               placeholder="Título o descripción" value="{{ request.GET.search|default:'' }}">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="1" id="is_public" name="is_public"
+                                   {% if request.GET.is_public == '1' %}checked{% endif %}>
+                            <label class="form-check-label" for="is_public">
+                                Solo públicos
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="1" id="is_favorite" name="is_favorite"
+                                   {% if request.GET.is_favorite == '1' %}checked{% endif %}>
+                            <label class="form-check-label" for="is_favorite">
+                                Solo favoritos
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-filter me-1"></i> Filtrar
+                        </button>
+                        <a href="{% url 'charts:saved_chart_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-sync-alt"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Indicador de filtros activos -->
+        {% if request.GET.chart_type or request.GET.search or request.GET.is_public or request.GET.is_favorite %}
+        <div class="d-flex align-items-center mb-3">
+            <span class="me-2">Filtros activos:</span>
+            {% if request.GET.chart_type %}
+            <span class="badge bg-primary me-2">
+                Tipo: {{ chart_types|dictsort:"id"|dictsortreversed:"id"|first }}
+                <a href="#" class="text-white ms-1" onclick="removeFilter('chart_type')"><i class="fas fa-times"></i></a>
+            </span>
+            {% endif %}
+            
+            {% if request.GET.search %}
+            <span class="badge bg-primary me-2">
+                Búsqueda: "{{ request.GET.search }}"
+                <a href="#" class="text-white ms-1" onclick="removeFilter('search')"><i class="fas fa-times"></i></a>
+            </span>
+            {% endif %}
+            
+            {% if request.GET.is_public %}
+            <span class="badge bg-primary me-2">
+                Solo públicos
+                <a href="#" class="text-white ms-1" onclick="removeFilter('is_public')"><i class="fas fa-times"></i></a>
+            </span>
+            {% endif %}
+            
+            {% if request.GET.is_favorite %}
+            <span class="badge bg-primary me-2">
+                Solo favoritos
+                <a href="#" class="text-white ms-1" onclick="removeFilter('is_favorite')"><i class="fas fa-times"></i></a>
+            </span>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    {% for chart in charts %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card shadow-sm h-100 chart-card">
+            <div class="card-header d-flex justify-content-between align-items-center bg-transparent">
+                <!-- Tipo de gráfico e indicadores -->
+                <div>
+                    <span class="badge-chart-type">{{ chart.chart_type.name }}</span>
+                    {% if chart.is_public %}
+                    <span class="ms-1 text-primary" title="Público">
+                        <i class="fas fa-globe-americas"></i>
+                    </span>
+                    {% endif %}
+                    {% if chart.is_favorite %}
+                    <span class="ms-1 text-warning" title="Favorito">
+                        <i class="fas fa-star"></i>
+                    </span>
+                    {% endif %}
+                </div>
+                
+                <!-- Menú de acciones -->
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary" type="button" 
+                            id="chartActions{{ chart.id }}" data-bs-toggle="dropdown" 
+                            aria-expanded="false">
+                        <i class="fas fa-ellipsis-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="chartActions{{ chart.id }}">
+                        <li>
+                            <a class="dropdown-item" href="{% url 'charts:saved_chart_update' chart.id %}">
+                                <i class="fas fa-edit me-2 text-muted"></i> Editar
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#" onclick="toggleFavorite({{ chart.id }}, this); return false;">
+                                {% if chart.is_favorite %}
+                                <i class="fas fa-star me-2 text-warning"></i> Quitar de favoritos
+                                {% else %}
+                                <i class="far fa-star me-2 text-muted"></i> Añadir a favoritos
+                                {% endif %}
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#shareModal{{ chart.id }}">
+                                <i class="fas fa-share-alt me-2 text-muted"></i> Compartir
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="{% url 'charts:saved_chart_delete' chart.id %}">
+                                <i class="fas fa-trash-alt me-2"></i> Eliminar
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Vista previa del gráfico -->
+            <a href="{% url 'charts:saved_chart_update' chart.id %}" class="text-decoration-none">
+                <div class="chart-preview" style="height: 200px; position: relative;">
+                    <canvas id="chartPreview{{ chart.id }}"></canvas>
+                </div>
+            </a>
+            
+            <!-- Contenido de la tarjeta -->
+            <div class="card-body">
+                <h5 class="card-title">{{ chart.title }}</h5>
+                {% if chart.description %}
+                <p class="card-text text-muted small">{{ chart.description|truncatechars:80 }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Pie con metadatos -->
+            <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                    Actualizado: {{ chart.modified_at|date:"d/m/Y" }}
+                </small>
+                <div>
+                    <button class="btn btn-sm btn-primary preview-btn" data-chart-id="{{ chart.id }}">
+                        <i class="fas fa-eye me-1"></i> Ver
+                    </button>
+                    <a href="#" class="btn btn-sm btn-success" onclick="addToDashboard({{ chart.id }}); return false;">
+                        <i class="fas fa-plus me-1"></i> Añadir al dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-chart-line text-muted fs-1 mb-3"></i>
+                <h4>No hay gráficos disponibles</h4>
+                <p class="text-muted mb-4">No se encontraron gráficos que coincidan con tus criterios de búsqueda.</p>
+                <a href="{% url 'charts:saved_chart_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i> Crear nuevo gráfico
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Paginación -->
+{% if charts.paginator.num_pages > 1 %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="Paginación de gráficos">
+            <ul class="pagination justify-content-center">
+                {% if charts.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Primera">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ charts.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Anterior">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Primera">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Anterior">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+                
+                {% for i in charts.paginator.page_range %}
+                    {% if charts.number == i %}
+                    <li class="page-item active"><a class="page-link" href="#">{{ i }}</a></li>
+                    {% elif i > charts.number|add:'-3' and i < charts.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ i }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if charts.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ charts.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Siguiente">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ charts.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Última">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Siguiente">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Última">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modales para compartir -->
+{% for chart in charts %}
+<div class="modal fade" id="shareModal{{ chart.id }}" tabindex="-1" aria-labelledby="shareModalLabel{{ chart.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="shareModalLabel{{ chart.id }}">Compartir "{{ chart.title }}"</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3 form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="publicSwitch{{ chart.id }}" 
+                           {% if chart.is_public %}checked{% endif %}
+                           onchange="togglePublic({{ chart.id }}, this.checked)">
+                    <label class="form-check-label" for="publicSwitch{{ chart.id }}">
+                        Hacer público este gráfico
+                    </label>
+                    <div class="form-text">
+                        Si está activado, cualquier usuario podrá ver este gráfico.
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Enlace directo</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" readonly 
+                               value="{{ request.scheme }}://{{ request.get_host }}{% url 'charts:saved_chart_update' chart.id %}" 
+                               id="shareLink{{ chart.id }}">
+                        <button class="btn btn-outline-secondary" type="button" 
+                                onclick="copyToClipboard('shareLink{{ chart.id }}')">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h6>Compartir con usuarios específicos</h6>
+                    <!-- Aquí iría un selector de usuarios si se implementa esta funcionalidad -->
+                    <p class="text-muted small">Esta funcionalidad estará disponible próximamente.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Modal para seleccionar Dashboard -->
+<div class="modal fade" id="dashboardModal" tabindex="-1" aria-labelledby="dashboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="dashboardModalLabel">Añadir a Dashboard</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="selectedChartId" value="">
+                <div class="mb-3">
+                    <label for="dashboardSelect" class="form-label">Seleccionar Dashboard</label>
+                    <select class="form-select" id="dashboardSelect">
+                        <option value="" selected disabled>Seleccione un dashboard...</option>
+                        {% for dashboard in dashboards %}
+                        <option value="{{ dashboard.id }}">
+                            {{ dashboard.name }}
+                            {% if dashboard.is_default %} (Predeterminado){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="widgetWidth" class="form-label">Ancho del widget (1-12)</label>
+                    <input type="number" class="form-control" id="widgetWidth" min="1" max="12" value="4">
+                    <div class="form-text">Un valor de 12 ocupará todo el ancho disponible.</div>
+                </div>
+                <div class="mb-3">
+                    <label for="widgetHeight" class="form-label">Alto del widget</label>
+                    <input type="number" class="form-control" id="widgetHeight" min="1" max="12" value="3">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmAddToDashboard()">Añadir</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de visualización de gráfico -->
+<div class="modal fade" id="previewChartModal" tabindex="-1" aria-labelledby="previewChartModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="previewChartModalLabel">Vista previa del gráfico</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="chart-container mb-3" style="position: relative; height:400px;">
+                    <canvas id="fullPreviewChart"></canvas>
+                </div>
+                <div id="previewChartInfo" class="mt-3">
+                    <h5 id="previewChartTitle"></h5>
+                    <p id="previewChartDescription" class="text-muted"></p>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <p><strong>Tipo:</strong> <span id="previewChartType"></span></p>
+                            <p><strong>Modelo:</strong> <span id="previewChartModel"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Campo Eje X:</strong> <span id="previewChartXAxis"></span></p>
+                            <p><strong>Campo Eje Y:</strong> <span id="previewChartYAxis"></span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a href="#" id="previewChartEditLink" class="btn btn-primary">
+                    <i class="fas fa-edit me-1"></i> Editar
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Mostrar previsualizaciones de gráficos
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar previsualizaciones
+        {% for chart in charts %}
+        initChartPreview({{ chart.id }});
+        {% endfor %}
+        
+        // Funcionalidad para botones de previsualización
+        const previewButtons = document.querySelectorAll('.preview-btn');
+        previewButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const chartId = this.getAttribute('data-chart-id');
+                showFullPreview(chartId);
+            });
+        });
+    });
+    
+    function initChartPreview(chartId) {
+        // Obtener datos del gráfico mediante AJAX
+        sendAjaxRequest(
+            `/charts/api/charts/${chartId}/generate_data/`, 
+            'GET', 
+            null,
+            function(response) {
+                renderChartPreview(`chartPreview${chartId}`, response);
+            },
+            function(xhr, status, error) {
+                console.error('Error al cargar datos del gráfico:', error);
+                const canvas = document.getElementById(`chartPreview${chartId}`);
+                const ctx = canvas.getContext('2d');
+                ctx.font = '14px Arial';
+                ctx.fillStyle = '#dc3545';
+                ctx.textAlign = 'center';
+                ctx.fillText('Error al cargar la vista previa', canvas.width / 2, canvas.height / 2);
+            }
+        );
+    }
+    
+    function renderChartPreview(canvasId, chartData) {
+        const canvas = document.getElementById(canvasId);
+        const ctx = canvas.getContext('2d');
+        
+        // Configurar el tipo de gráfico y datos
+        const chartConfig = {
+            type: chartData.chart_type || 'bar',
+            data: {
+                labels: chartData.data.map(item => item.label),
+                datasets: [{
+                    label: chartData.title,
+                    data: chartData.data.map(item => item.y),
+                    backgroundColor: getColorScheme(chartData.data.length),
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: true
+                    }
+                }
+            }
+        };
+        
+        // Adaptar configuración según el tipo de gráfico
+        if (['pie', 'doughnut', 'polarArea'].includes(chartData.chart_type)) {
+            // Configuración especial para gráficos circulares
+            chartConfig.options.plugins.legend.display = true;
+            chartConfig.options.plugins.legend.position = 'bottom';
+        }
+        
+        // Aplicar cualquier configuración personalizada
+        if (chartData.config) {
+            // Combinar configuraciones
+            Object.assign(chartConfig.options, chartData.config);
+        }
+        
+        // Crear o actualizar el gráfico
+        if (window.chartInstances && window.chartInstances[canvasId]) {
+            window.chartInstances[canvasId].destroy();
+        }
+        
+        // Guardar referencia al gráfico
+        if (!window.chartInstances) window.chartInstances = {};
+        window.chartInstances[canvasId] = new Chart(ctx, chartConfig);
+    }
+    
+    function showFullPreview(chartId) {
+        // Configurar el modal
+        document.getElementById('previewChartTitle').innerText = 'Cargando...';
+        document.getElementById('previewChartDescription').innerText = '';
+        document.getElementById('previewChartType').innerText = '';
+        document.getElementById('previewChartModel').innerText = '';
+        document.getElementById('previewChartXAxis').innerText = '';
+        document.getElementById('previewChartYAxis').innerText = '';
+        document.getElementById('previewChartEditLink').href = `{% url 'charts:saved_chart_update' 999 %}`.replace('999', chartId);
+        
+        // Abrir el modal
+        const previewModal = new bootstrap.Modal(document.getElementById('previewChartModal'));
+        previewModal.show();
+        
+        // Cargar datos del gráfico y mostrar vista previa completa
+        sendAjaxRequest(
+            `/charts/api/charts/${chartId}/`,
+            'GET',
+            null,
+            function(chartInfo) {
+                // Actualizar información del gráfico
+                document.getElementById('previewChartTitle').innerText = chartInfo.title;
+                document.getElementById('previewChartDescription').innerText = chartInfo.description || 'Sin descripción';
+                document.getElementById('previewChartType').innerText = chartInfo.chart_type_name;
+                document.getElementById('previewChartModel').innerText = `${chartInfo.app_label}.${chartInfo.model_name}`;
+                document.getElementById('previewChartXAxis').innerText = chartInfo.x_axis_field;
+                document.getElementById('previewChartYAxis').innerText = chartInfo.y_axis_field;
+                
+                // Cargar datos para el gráfico
+                sendAjaxRequest(
+                    `/charts/api/charts/${chartId}/generate_data/`,
+                    'GET',
+                    null,
+                    function(chartData) {
+                        renderChartPreview('fullPreviewChart', chartData);
+                    }
+                );
+            }
+        );
+    }
+    
+    function toggleFavorite(chartId, button) {
+        sendAjaxRequest(
+            `/charts/api/charts/${chartId}/toggle_favorite/`,
+            'POST',
+            {},
+            function(response) {
+                // Actualizar el botón y el icono
+                if (response.is_favorite) {
+                    button.innerHTML = '<i class="fas fa-star me-2 text-warning"></i> Quitar de favoritos';
+                    // Actualizar el indicador en la tarjeta
+                    const cardHeader = button.closest('.card').querySelector('.card-header div:first-child');
+                    if (!cardHeader.querySelector('.text-warning')) {
+                        const favoriteIcon = document.createElement('span');
+                        favoriteIcon.className = 'ms-1 text-warning';
+                        favoriteIcon.title = 'Favorito';
+                        favoriteIcon.innerHTML = '<i class="fas fa-star"></i>';
+                        cardHeader.appendChild(favoriteIcon);
+                    }
+                } else {
+                    button.innerHTML = '<i class="far fa-star me-2 text-muted"></i> Añadir a favoritos';
+                    // Actualizar el indicador en la tarjeta
+                    const cardHeader = button.closest('.card').querySelector('.card-header div:first-child');
+                    const favoriteIcon = cardHeader.querySelector('.text-warning');
+                    if (favoriteIcon) {
+                        favoriteIcon.remove();
+                    }
+                }
+            }
+        );
+    }
+    
+    function togglePublic(chartId, isPublic) {
+        sendAjaxRequest(
+            `/charts/api/charts/${chartId}/`,
+            'PATCH',
+            { is_public: isPublic },
+            function(response) {
+                // Mostrar notificación
+                const message = isPublic ? 
+                    'El gráfico ahora es público y visible para todos los usuarios.' :
+                    'El gráfico ahora es privado y solo visible para ti.';
+                
+                alert(message);
+                
+                // Actualizar el indicador en la tarjeta
+                const cards = document.querySelectorAll('.chart-card');
+                cards.forEach(card => {
+                    if (card.querySelector(`#chartActions${chartId}`)) {
+                        const cardHeader = card.querySelector('.card-header div:first-child');
+                        const publicIcon = cardHeader.querySelector('.text-primary');
+                        
+                        if (isPublic && !publicIcon) {
+                            const newIcon = document.createElement('span');
+                            newIcon.className = 'ms-1 text-primary';
+                            newIcon.title = 'Público';
+                            newIcon.innerHTML = '<i class="fas fa-globe-americas"></i>';
+                            cardHeader.appendChild(newIcon);
+                        } else if (!isPublic && publicIcon) {
+                            publicIcon.remove();
+                        }
+                    }
+                });
+            }
+        );
+    }
+    
+    function addToDashboard(chartId) {
+        document.getElementById('selectedChartId').value = chartId;
+        const dashboardModal = new bootstrap.Modal(document.getElementById('dashboardModal'));
+        dashboardModal.show();
+    }
+    
+    function confirmAddToDashboard() {
+        const chartId = document.getElementById('selectedChartId').value;
+        const dashboardId = document.getElementById('dashboardSelect').value;
+        const width = document.getElementById('widgetWidth').value;
+        const height = document.getElementById('widgetHeight').value;
+        
+        if (!dashboardId) {
+            alert('Por favor, selecciona un dashboard.');
+            return;
+        }
+        
+        // Crear el widget en el dashboard
+        sendAjaxRequest(
+            `/charts/api/widgets/`,
+            'POST',
+            {
+                dashboard: dashboardId,
+                saved_chart: chartId,
+                position_x: 0,  // Se ajustará automáticamente al añadirse
+                position_y: 0,  // Se ajustará automáticamente al añadirse
+                width: width,
+                height: height
+            },
+            function(response) {
+                // Cerrar el modal
+                bootstrap.Modal.getInstance(document.getElementById('dashboardModal')).hide();
+                
+                // Mostrar mensaje de éxito
+                alert('El gráfico se ha añadido al dashboard correctamente.');
+                
+                // Redirigir al dashboard
+                window.location.href = `/charts/dashboards/${dashboardId}/`;
+            }
+        );
+    }
+    
+    function copyToClipboard(elementId) {
+        const element = document.getElementById(elementId);
+        element.select();
+        document.execCommand('copy');
+        
+        // Mostrar feedback
+        const button = element.nextElementSibling;
+        const originalHTML = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-check"></i>';
+        button.classList.add('btn-success');
+        button.classList.remove('btn-outline-secondary');
+        
+        setTimeout(() => {
+            button.innerHTML = originalHTML;
+            button.classList.remove('btn-success');
+            button.classList.add('btn-outline-secondary');
+        }, 1500);
+    }
+    
+    function removeFilter(filterName) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete(filterName);
+        window.location.href = url.toString();
+    }
+</script>
+{% endblock %}

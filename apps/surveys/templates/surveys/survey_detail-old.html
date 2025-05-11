@@ -1,0 +1,505 @@
+{% extends "surveys/base-old.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block page_title %}{{ survey.title }} - {% trans "Survey Detail" %}{% endblock %}
+
+{% block header %}{{ survey.title }}{% endblock %}
+
+{% block page_content %}
+<!-- Header with Survey Details -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <p class="text-muted">
+            {% if survey.is_published %}
+            <span class="badge bg-success">{% trans "Published" %}</span>
+            {% else %}
+            <span class="badge bg-secondary">{% trans "Draft" %}</span>
+            {% endif %}
+            {% if survey.start_date and survey.end_date %}
+            <span class="ms-2">{% trans "Active period:" %} {{ survey.start_date|date:"M d, Y" }} - {{ survey.end_date|date:"M d, Y" }}</span>
+            {% endif %}
+        </p>
+        <div class="mb-3">{{ survey.description|linebreaks }}</div>
+    </div>
+    <div class="col-md-4 text-md-end d-flex flex-column justify-content-between">
+        <div>
+            <h4>{% trans "Survey Statistics" %}</h4>
+            <p><strong>{% trans "Questions:" %}</strong> {{ survey.question_count }}</p>
+            <p><strong>{% trans "Responses:" %}</strong> {{ response_count }}</p>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'encuestas:survey_update' survey.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil-square"></i> {% trans "Edit Survey" %}
+            </a>
+            <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="visually-hidden">{% trans "Toggle Dropdown" %}</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                {% if not survey.is_published %}
+                <li>
+                    <div class="col-9">
+                        <input type="text" class="form-control" name="option_text[]" placeholder="{% trans 'Option text' %}">
+                    </div>
+                    <div class="col-3 d-flex">
+                        <input type="text" class="form-control" name="option_value[]" placeholder="{% trans 'Value' %}">
+                        <button type="button" class="btn btn-sm btn-outline-danger ms-2 remove-option">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                <form action="{% url 'encuestas:survey_publish' survey.id %}" method="post" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="dropdown-item">
+                            <i class="bi bi-check2-circle"></i> {% trans "Publish Survey" %}
+                        </button>
+                    </form>
+                </li>
+                {% else %}
+                <li>
+                    <!-- {% url 'encuestas:survey_unpublish' survey.id %} -->
+                    <form action="#" method="post" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="dropdown-item">
+                            <i class="bi bi-x-circle"></i> {% trans "Unpublish Survey" %}
+                        </button>
+                    </form>
+                </li>
+                {% endif %}
+                <li><a class="dropdown-item" href="#">
+                    <i class="bi bi-eye"></i> {% trans "Preview Survey" %}
+                </a></li>
+                <li><a class="dropdown-item" href="#">
+                    <i class="bi bi-list-ul"></i> {% trans "View Responses" %}
+                </a></li>
+                <li><a class="dropdown-item" href="#">
+                    <i class="bi bi-download"></i> {% trans "Export Data" %}
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <button type="button" class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#deleteSurveyModal">
+                        <i class="bi bi-trash"></i> {% trans "Delete Survey" %}
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Questions Section -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="h4 mb-0">{% trans "Survey Questions" %}</h2>
+        <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addQuestionModal">
+            <i class="bi bi-plus-circle"></i> {% trans "Add Question" %}
+        </button>
+    </div>
+    <div class="card-body">
+        {% if questions %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th width="5%">#</th>
+                            <th width="40%">{% trans "Question" %}</th>
+                            <th width="15%">{% trans "Type" %}</th>
+                            <th width="10%">{% trans "Required" %}</th>
+                            <th width="15%">{% trans "Options" %}</th>
+                            <th width="15%" class="text-end">{% trans "Actions" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="questions-list" class="sortable">
+                        {% for question in questions %}
+                        <tr id="question-{{ question.id }}" data-id="{{ question.id }}">
+                            <td>{{ question.order }}</td>
+                            <td>
+                                <strong>{{ question.text }}</strong>
+                                {% if question.help_text %}
+                                    <p class="text-muted small mb-0">{{ question.help_text }}</p>
+                                {% endif %}
+                            </td>
+                            <td>{{ question.question_type.name }}</td>
+                            <td>
+                                {% if question.is_required %}
+                                <span class="badge bg-info">{% trans "Required" %}</span>
+                                {% else %}
+                                <span class="badge bg-light text-dark">{% trans "Optional" %}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if question.has_choices %}
+                                    {{ question.choices.count }} {% trans "options" %}
+                                    <a href="#" class="ms-1 small" data-bs-toggle="modal" data-bs-target="#choicesModal-{{ question.id }}">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-primary edit-question" 
+                                            data-question-id="{{ question.id }}" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#editQuestionModal-{{ question.id }}">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#deleteQuestionModal-{{ question.id }}">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <div class="mb-3">
+                    <i class="bi bi-card-checklist text-muted" style="font-size: 3rem;"></i>
+                </div>
+                <h3>{% trans "No questions added yet" %}</h3>
+                <p class="text-muted">{% trans "Start building your survey by adding questions." %}</p>
+                <button type="button" class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#addQuestionModal">
+                    <i class="bi bi-plus-circle"></i> {% trans "Add Your First Question" %}
+                </button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add Question Modal -->
+<div class="modal fade" id="addQuestionModal" tabindex="-1" aria-labelledby="addQuestionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" action="{% url 'encuestas:question_create' survey.id %}" id="add-question-form">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addQuestionModalLabel">{% trans "Add New Question" %}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="question_type" class="form-label">{% trans "Question Type" %}</label>
+                        <select class="form-select select2" id="question_type" name="question_type" required>
+                            <option value="">{% trans "Select a question type" %}</option>
+                            {% for q_type in question_types %}
+                            <option value="{{ q_type.id }}">{{ q_type.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="question_text" class="form-label">{% trans "Question Text" %}</label>
+                        <textarea class="form-control" id="question_text" name="text" rows="2" required></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="help_text" class="form-label">{% trans "Help Text" %} <span class="text-muted">({% trans "Optional" %})</span></label>
+                        <textarea class="form-control" id="help_text" name="help_text" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="is_required" name="is_required" checked>
+                        <label class="form-check-label" for="is_required">{% trans "This question is required" %}</label>
+                    </div>
+                    
+                    <!-- Dynamic fields based on question type -->
+                    <div id="question-options" class="d-none">
+                        <hr>
+                        <h6>{% trans "Question Options" %}</h6>
+                        <p class="text-muted small">{% trans "Add options for this question type" %}</p>
+                        
+                        <div class="option-list">
+                            <div class="option-item mb-2 row">
+                                <div class="col-9">
+                                    <input type="text" class="form-control" name="option_text[]" placeholder="{% trans 'Option text' %}">
+                                </div>
+                                <div class="col-3">
+                                    <input type="text" class="form-control" name="option_value[]" placeholder="{% trans 'Value' %}">
+                                </div>
+                            </div>
+                            <div class="option-item mb-2 row">
+                                <div class="col-9">
+                                    <input type="text" class="form-control" name="option_text[]" placeholder="{% trans 'Option text' %}">
+                                </div>
+                                <div class="col-3">
+                                    <input type="text" class="form-control" name="option_value[]" placeholder="{% trans 'Value' %}">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="button" class="btn btn-sm btn-outline-primary mt-2 add-option">
+                            <i class="bi bi-plus-circle"></i> {% trans "Add Another Option" %}
+                        </button>
+                    </div>
+                    
+                    <!-- Number range fields -->
+                    <div id="number-options" class="d-none">
+                        <hr>
+                        <h6>{% trans "Number Range" %}</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="min_value" class="form-label">{% trans "Minimum Value" %}</label>
+                                    <input type="number" class="form-control" id="min_value" name="min_value">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="max_value" class="form-label">{% trans "Maximum Value" %}</label>
+                                    <input type="number" class="form-control" id="max_value" name="max_value">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Conditional logic -->
+                    <div id="conditional-logic" class="mt-3">
+                        <hr>
+                        <h6>{% trans "Conditional Display" %} <span class="text-muted">({% trans "Optional" %})</span></h6>
+                        <p class="text-muted small">{% trans "Show this question only when a previous question has a specific answer" %}</p>
+                        
+                        <div class="mb-3">
+                            <label for="dependent_on" class="form-label">{% trans "Show this question when" %}</label>
+                            <select class="form-select select2" id="dependent_on" name="dependent_on">
+                                <option value="">{% trans "Always show this question" %}</option>
+                                {% for q in questions %}
+                                <option value="{{ q.id }}">{{ q.text|truncatechars:50 }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="dependent_value" class="form-label">{% trans "Has the value" %}</label>
+                            <input type="text" class="form-control" id="dependent_value" name="dependent_value" placeholder="{% trans 'Enter value or leave blank for any value' %}">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                    <button type="submit" class="btn btn-primary">{% trans "Add Question" %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Question Modals (generated for each question) -->
+{% for question in questions %}
+<div class="modal fade" id="editQuestionModal-{{ question.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" action="{% url 'encuestas:question_update' survey.id question.id %}" id="edit-question-form-{{ question.id }}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">{% trans "Edit Question" %}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="edit_question_type_{{ question.id }}" class="form-label">{% trans "Question Type" %}</label>
+                        <select class="form-select select2" id="edit_question_type_{{ question.id }}" name="question_type" required>
+                            {% for q_type in question_types %}
+                            <option value="{{ q_type.id }}" {% if q_type.id == question.question_type.id %}selected{% endif %}>{{ q_type.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit_question_text_{{ question.id }}" class="form-label">{% trans "Question Text" %}</label>
+                        <textarea class="form-control" id="edit_question_text_{{ question.id }}" name="text" rows="2" required>{{ question.text }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit_help_text_{{ question.id }}" class="form-label">{% trans "Help Text" %} <span class="text-muted">({% trans "Optional" %})</span></label>
+                        <textarea class="form-control" id="edit_help_text_{{ question.id }}" name="help_text" rows="2">{{ question.help_text }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="edit_is_required_{{ question.id }}" name="is_required" {% if question.is_required %}checked{% endif %}>
+                        <label class="form-check-label" for="edit_is_required_{{ question.id }}">{% trans "This question is required" %}</label>
+                    </div>
+                    
+                    <!-- Edit options for multiple choice questions -->
+                    {% if question.has_choices %}
+                    <div id="edit-options-{{ question.id }}">
+                        <hr>
+                        <h6>{% trans "Question Options" %}</h6>
+                        
+                        <div class="option-list-edit-{{ question.id }}">
+                            {% for choice in question.choices.all %}
+                            <div class="option-item mb-2 row">
+                                <div class="col-9">
+                                    <input type="text" class="form-control" name="option_text[]" value="{{ choice.text }}" placeholder="{% trans 'Option text' %}">
+                                    <input type="hidden" name="option_id[]" value="{{ choice.id }}">
+                                </div>
+                                <div class="col-3 d-flex">
+                                    <input type="text" class="form-control" name="option_value[]" value="{{ choice.value }}" placeholder="{% trans 'Value' %}">
+                                    <button type="button" class="btn btn-sm btn-outline-danger ms-2 remove-option">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <button type="button" class="btn btn-sm btn-outline-primary mt-2 add-option-edit" data-target="{{ question.id }}">
+                            <i class="bi bi-plus-circle"></i> {% trans "Add Another Option" %}
+                        </button>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Number range fields -->
+                    {% if question.question_type.name == 'NUMBER' or question.question_type.name == 'RATING' %}
+                    <div id="edit-number-options-{{ question.id }}">
+                        <hr>
+                        <h6>{% trans "Number Range" %}</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="edit_min_value_{{ question.id }}" class="form-label">{% trans "Minimum Value" %}</label>
+                                    <input type="number" class="form-control" id="edit_min_value_{{ question.id }}" name="min_value" value="{{ question.min_value|default:'' }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="edit_max_value_{{ question.id }}" class="form-label">{% trans "Maximum Value" %}</label>
+                                    <input type="number" class="form-control" id="edit_max_value_{{ question.id }}" name="max_value" value="{{ question.max_value|default:'' }}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Conditional logic -->
+                    <div id="edit-conditional-logic-{{ question.id }}">
+                        <hr>
+                        <h6>{% trans "Conditional Display" %} <span class="text-muted">({% trans "Optional" %})</span></h6>
+                        <p class="text-muted small">{% trans "Show this question only when a previous question has a specific answer" %}</p>
+                        
+                        <div class="mb-3">
+                            <label for="edit_dependent_on_{{ question.id }}" class="form-label">{% trans "Show this question when" %}</label>
+                            <select class="form-select select2" id="edit_dependent_on_{{ question.id }}" name="dependent_on">
+                                <option value="">{% trans "Always show this question" %}</option>
+                                {% for q in questions %}
+                                    {% if q.id != question.id %}  <!-- don't allow self-reference -->
+                                    <option value="{{ q.id }}" {% if question.dependent_on and question.dependent_on.id == q.id %}selected{% endif %}>
+                                        {{ q.text|truncatechars:50 }}
+                                    </option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="edit_dependent_value_{{ question.id }}" class="form-label">{% trans "Has the value" %}</label>
+                            <input type="text" class="form-control" id="edit_dependent_value_{{ question.id }}" name="dependent_value" value="{{ question.dependent_value }}" placeholder="{% trans 'Enter value or leave blank for any value' %}">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                    <button type="submit" class="btn btn-primary">{% trans "Save Changes" %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Question Modal for each question -->
+<div class="modal fade" id="deleteQuestionModal-{{ question.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{% trans "Delete Question" %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>{% trans "Are you sure you want to delete this question?" %}</p>
+                <div class="alert alert-warning">
+                    <strong>{{ question.text }}</strong>
+                    <p class="mb-0 mt-2">{% trans "This action cannot be undone and will remove all associated answers." %}</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                <form method="post" action="{% url 'encuestas:question_delete' survey.id question.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">{% trans "Delete Question" %}</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Choices Modal for multiple choice questions -->
+{% if question.has_choices %}
+<div class="modal fade" id="choicesModal-{{ question.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{% trans "Question Options" %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6>{{ question.text }}</h6>
+                <p class="text-muted small">{{ question.question_type.name }}</p>
+                
+                <div class="list-group mt-3">
+                    {% for choice in question.choices.all %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ choice.text }}</strong>
+                                {% if choice.value %}
+                                <small class="text-muted d-block">{% trans "Value:" %} {{ choice.value }}</small>
+                                {% endif %}
+                            </div>
+                            <span class="badge bg-secondary">{{ forloop.counter }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Close" %}</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#editQuestionModal-{{ question.id }}">
+                    {% trans "Edit Options" %}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
+<!-- Delete Survey Modal -->
+<div class="modal fade" id="deleteSurveyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{% trans "Delete Survey" %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>{% trans "Are you sure you want to delete this survey?" %}</p>
+                <div class="alert alert-danger">
+                    <strong>{{ survey.title }}</strong>
+                    <p class="mb-0 mt-2">{% trans "This action cannot be undone and will delete all questions and responses." %}</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                <form method="post" action="{% url 'encuestas:survey_delete' survey.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">{% trans "Delete Survey" %}</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

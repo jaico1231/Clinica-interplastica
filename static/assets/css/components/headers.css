@@ -1,0 +1,563 @@
+/* ====
+HEADER.CSS - VERSIÓN REVISADA Y OPTIMIZADA
+Controla la apariencia y comportamiento del header principal.
+Sincronizado con sidebar.css y sistema de temas.
+==== */
+
+/* ====
+1. VARIABLES Y CONFIGURACIÓN INICIAL (Asume variables definidas globalmente)
+==== */
+
+/* Estilos específicos para iconos en la barra superior (topbar) */
+.nav-item.topbar-icon {
+/* !important usado aquí para asegurar la anulación de estilos de nav-item genéricos */
+background-color: transparent !important;
+box-shadow: none !important;
+margin: 0 1%;
+}
+
+.nav-item.topbar-icon .nav-link {
+color: var(--header-text);
+background-color: transparent;
+border-radius: 50%;
+width: 40px;
+height: 40px;
+display: flex;
+align-items: center;
+justify-content: center;
+transition: all 0.3s ease;
+}
+
+.nav-item.topbar-icon .nav-link:hover {
+color: var(--accent-primary);
+background-color: rgba(255, 255, 255, 0.1); /* Considerar usar variable si existe */
+}
+
+/* ====
+2. ESTRUCTURA PRINCIPAL DEL HEADER
+==== */
+.main-header {
+position: fixed;
+top: 0;
+right: 0;
+left: var(--sidebar-width); /* Coordinado con sidebar.css */
+z-index: 1030;
+background-color: var(--header-bg);
+color: var(--header-text);
+transition: left var(--header-transition-speed, 0.3s) ease, 
+            width var(--header-transition-speed, 0.3s) ease;
+width: calc(100% - var(--sidebar-width)); /* Coordinado con sidebar.css */
+height: var(--header-height);
+}
+
+/* Adaptación al tema claro */
+.theme-light .main-header {
+background-color: var(--header-bg-light);
+color: var(--header-text-light);
+}
+
+/* Sombra al hacer scroll */
+.main-header.scrolled {
+box-shadow: var(--header-shadow, 0 2px 4px rgba(0,0,0,0.1));
+}
+
+/* Contenedor interno */
+.main-header .navbar-header {
+padding: 0.75rem 1.5rem;
+width: 100%;
+height: 100%;
+display: flex;
+align-items: center;
+}
+
+/* ====
+3. COORDINACIÓN CON EL SIDEBAR Y LAYOUT PRINCIPAL
+==== */
+
+/* Ajustar header cuando el sidebar está COLAPSADO */
+/* Asegura que estas clases y variables coincidan con sidebar.css */
+.sidebar-minimize .main-header,
+.sidebar-collapsed ~ .main-header {
+width: calc(100% - var(--sidebar-collapsed-width));
+left: var(--sidebar-collapsed-width);
+}
+
+/* Ajustar header cuando el sidebar está OCULTO */
+.hide-sidebar .main-header {
+width: 100%;
+left: 0;
+}
+
+/* =================================================
+    4. ELEMENTOS DEL HEADER (Dropdowns, Switchers, etc.)
+    ================================================ */
+
+/* Estilos base para dropdowns en el header */
+.main-header .dropdown-menu {
+margin-top: 0.5rem;
+border: none;
+box-shadow: var(--shadow-lg, 0 5px 25px rgba(0, 0, 0, 0.1));
+background-color: var(--bg-secondary); /* Fondo base dropdown */
+color: var(--text-primary);
+border-radius: var(--dropdown-border-radius, 0.5rem);
+padding: 0; /* Reset padding, controlar en elementos internos */
+overflow: hidden; /* Para aplicar border-radius a contenido */
+}
+
+.theme-dark .main-header .dropdown-menu {
+    background-color: var(--dark-bg-secondary, #343a40); /* Fondo oscuro dropdown */
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Header transparente con efecto blur */
+.main-header .navbar-header-transparent {
+backdrop-filter: blur(10px);
+-webkit-backdrop-filter: blur(10px);
+}
+
+/* Selector de idioma */
+.language-switcher select {
+border: none;
+background-color: transparent;
+cursor: pointer;
+color: var(--header-text);
+padding: 0.5rem; /* Añadir algo de padding */
+}
+.theme-light .language-switcher select {
+color: var(--header-text-light);
+}
+
+/* =============================================
+4.1 TEMA SWITCHER - BOTÓN DE CAMBIO DE TEMA
+============================================= */
+
+.theme-switcher-container {
+position: relative;
+display: inline-flex;
+align-items: center;
+margin: 0 1rem;
+z-index: 1000;
+}
+
+/* Contenedor principal del switcher */
+.theme-switcher {
+--switch-width: 62px;
+--switch-height: 32px;
+--icon-size: 18px;
+--knob-size: 24px;
+--transition: 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+
+position: relative;
+width: var(--switch-width);
+height: var(--switch-height);
+}
+
+/* Input checkbox oculto */
+#theme-toggle {
+position: absolute;
+opacity: 0;
+width: 0;
+height: 0;
+}
+
+/* Pista del slider (fondo) */
+.slider.round {
+position: absolute;
+cursor: pointer;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+background-color: var(--switch-track-bg);
+transition: var(--transition);
+border-radius: 34px;
+}
+
+/* Knob del slider (circulo movil) */
+.slider.round::before {
+content: '';
+position: absolute;
+height: var(--knob-size);
+width: var(--knob-size);
+left: 4px;
+bottom: 4px;
+background-color: var(--switch-knob-bg);
+transition: var(--transition);
+border-radius: 50%;
+box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Estado activo (tema oscuro) */
+#theme-toggle:checked + .slider.round {
+background-color: var(--switch-track-active-bg);
+}
+
+#theme-toggle:checked + .slider.round::before {
+transform: translateX(calc(var(--switch-width) - var(--knob-size) - 8px));
+}
+
+/* Contenedor de iconos */
+.theme-icons-wrapper {
+position: absolute;
+display: flex;
+justify-content: space-between;
+align-items: center;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+padding: 0 10px;
+pointer-events: none;
+}
+
+/* Iconos individuales */
+.theme-icon {
+font-size: var(--icon-size);
+color: var(--switch-icon-color);
+transition: all 0.3s ease;
+will-change: transform, opacity;
+filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+}
+
+/* Icono modo claro */
+.light-mode-icon {
+transform: translateX(0);
+opacity: 1;
+}
+
+/* Icono modo oscuro */
+.dark-mode-icon {
+transform: translateX(24px);
+opacity: 0;
+}
+
+/* Animaciones al activar */
+#theme-toggle:checked ~ .theme-icons-wrapper .light-mode-icon {
+transform: translateX(-24px);
+opacity: 0;
+}
+
+#theme-toggle:checked ~ .theme-icons-wrapper .dark-mode-icon {
+transform: translateX(0);
+opacity: 1;
+}
+
+/* Efectos hover */
+@media (hover: hover) {
+.slider.round:hover::before {
+    transform: translateX(2px) scale(1.1);
+}
+
+#theme-toggle:checked + .slider.round:hover::before {
+    transform: translateX(calc(var(--switch-width) - var(--knob-size) - 10px)) scale(1.1);
+}
+}
+
+/* Focus visible para accesibilidad */
+#theme-toggle:focus-visible + .slider.round {
+outline: 2px solid var(--accent-primary);
+outline-offset: 2px;
+}
+
+/* --- 4.2 Dropdown de Mensajes --- */
+.dropdown-menu.messages-notif-box {
+width: 350px;
+max-width: 90vw;
+/* Hereda estilos base de .main-header .dropdown-menu */
+}
+
+.dropdown-title {
+padding: 12px 20px;
+font-weight: 600;
+font-size: 0.9rem;
+border-bottom: 1px solid var(--border-light);
+display: flex;
+justify-content: space-between;
+align-items: center;
+}
+
+/* --- 4.3 Dropdown de Notificaciones --- */
+.dropdown-menu.notif-box {
+width: 350px;
+max-width: 90vw;
+/* Hereda estilos base */
+/* !important usado para asegurar posición sobre otros elementos */
+right: 10px !important; 
+left: auto !important;
+transform: none !important;
+position: absolute !important; /* Necesario para anular posicionamiento relativo */
+margin-top: 10px !important; /* Anula margen base si es necesario */
+}
+
+/* 
+-----------------------------------------
+--- 4.4 Dropdown de Acciones Rápidas --- 
+-----------------------------------------
+*/
+.dropdown-menu.quick-actions {
+    width: 350px;
+    max-width: 90vw;
+    right: 10px !important;
+    left: auto !important;
+    transform: none !important;
+    position: absolute !important;
+    margin-top: 10px !important;
+    border-radius: 8px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 15px;
+  }
+  
+  .quick-actions-header {
+    padding: 10px 15px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    margin-bottom: 10px;
+  }
+  
+  .quick-actions-header .title {
+    font-weight: 600;
+    font-size: 1rem;
+    display: block;
+  }
+  
+  .quick-actions-header .subtitle {
+    font-size: 0.8rem;
+    color: #6c757d;
+  }
+  
+  .quick-actions-scroll {
+    max-height: 350px;
+    overflow-y: auto;
+  }
+  
+  .quick-actions-items .row {
+    margin: 0 -5px;
+  }
+  
+  .quick-actions-items .col-6,
+  .quick-actions-items .col-md-4 {
+    padding: 5px;
+  }
+  
+  .quick-actions-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 15px 5px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+  }
+  
+  .quick-actions-item:hover {
+    background-color: #e9ecef;
+    transform: translateY(-2px);
+  }
+  
+  .quick-actions-item .avatar-item {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
+  
+  .quick-actions-item .avatar-item .material-symbols-outlined {
+    font-size: 20px;
+    color: #fff;
+  }
+  
+  .quick-actions-item .text {
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-align: center;
+    color: #495057;
+  }
+  
+  /* Dark mode support */
+  [data-theme="dark"] .dropdown-menu.quick-actions {
+    background-color: #2a2a2a;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  [data-theme="dark"] .quick-actions-header {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  [data-theme="dark"] .quick-actions-item {
+    background-color: #333;
+  }
+  
+  [data-theme="dark"] .quick-actions-item:hover {
+    background-color: #444;
+  }
+  
+  [data-theme="dark"] .quick-actions-item .text {
+    color: #e0e0e0;
+  }
+  
+  [data-theme="dark"] .quick-actions-header .subtitle {
+    color: #adb5bd;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 576px) {
+    .dropdown-menu.quick-actions {
+      width: 300px;
+      right: 0 !important;
+    }
+    
+    .quick-actions-item {
+      padding: 10px 5px;
+    }
+    
+    .quick-actions-item .avatar-item {
+      width: 35px;
+      height: 35px;
+    }
+  }
+
+/* --- 4.5 Dropdown de Perfil de Usuario --- */
+.topbar-user .dropdown-user {
+min-width: var(--user-dropdown-width, 250px);
+/* Hereda estilos base de .main-header .dropdown-menu */
+/* !important usado aquí para anular posicionamiento por defecto de Bootstrap */
+right: 0 !important;
+left: auto !important;
+transform: none !important;
+position: absolute !important; /* Asegura posicionamiento absoluto */
+margin-top: var(--user-dropdown-margin-top, 10px) !important; /* Anula margen base si es necesario */
+}
+
+/* Compatibilidad Bootstrap 5 */
+.navbar-nav .topbar-user.dropdown .dropdown-menu {
+position: absolute; /* Redundante si ya está en .dropdown-user, pero seguro */
+}
+
+/* Contenido del dropdown de usuario */
+.user-box {
+display: flex;
+padding: var(--user-box-padding, 1rem);
+background-color: var(--user-box-bg, var(--bg-tertiary)); /* Fondo ligeramente diferente */
+/* Hereda border-radius del dropdown */
+}
+.theme-dark .user-box {
+background-color: var(--user-box-dark-bg, var(--dark-bg-tertiary));
+}
+
+/* Avatar dentro del user-box */
+.avatar-lg {
+width: var(--avatar-lg-size, 60px);
+height: var(--avatar-lg-size, 60px);
+min-width: var(--avatar-lg-size, 60px);
+position: relative;
+}
+.avatar-lg img {
+width: 100%;
+height: 100%;
+object-fit: cover;
+border-radius: var(--avatar-border-radius, 50%);
+}
+
+/* Contenido accionable del dropdown */
+.dropdown-user-content {
+padding: var(--dropdown-content-padding, 0.5rem);
+}
+.dropdown-user-content .dropdown-item {
+padding: var(--dropdown-item-padding, 0.5rem 1rem);
+display: flex;
+align-items: center;
+color: var(--text-primary); /* Color texto item */
+transition: all var(--profile-btn-transition, 0.2s) ease;
+border-radius: var(--dropdown-item-radius, 4px); /* Radio para items individuales */
+}
+.dropdown-user-content .dropdown-item:hover,
+.dropdown-user-content .dropdown-item:focus {
+background-color: var(--bg-hover, var(--bg-tertiary));
+color: var(--text-primary); /* Mantener color o ajustar según hover */
+text-decoration: none;
+}
+
+/* Iconos en items */
+.dropdown-user-content .dropdown-item .material-symbols-outlined {
+margin-right: var(--dropdown-icon-margin, 0.75rem);
+font-size: var(--dropdown-icon-size, 1.1rem);
+opacity: var(--dropdown-icon-opacity, 0.7);
+}
+
+/* Separador */
+.dropdown-user-content .dropdown-divider {
+margin: var(--dropdown-divider-margin, 0.5rem 0);
+border-top: 1px solid var(--border-light);
+opacity: var(--dropdown-divider-opacity, 0.5);
+}
+
+/* Item Logout */
+.dropdown-user-content .logout-item {
+color: var(--danger);
+}
+.dropdown-user-content .logout-item:hover,
+.dropdown-user-content .logout-item:focus {
+color: var(--danger);
+background-color: rgba(var(--danger-rgb), 0.1); /* Fondo sutil al hacer hover */
+}
+.theme-dark .dropdown-user-content .logout-item {
+color: var(--danger-light);
+}
+.theme-dark .dropdown-user-content .logout-item:hover,
+.theme-dark .dropdown-user-content .logout-item:focus {
+    color: var(--danger-light);
+    background-color: rgba(var(--danger-light-rgb), 0.15);
+}
+
+/* Badge de notificación */
+.notification {
+position: absolute;
+top: -5px;
+right: -5px;
+font-size: 10px;
+font-weight: 600;
+min-width: 18px;
+height: 18px;
+line-height: 18px;
+text-align: center;
+border-radius: 50%;
+background-color: var(--accent-danger);
+color: var(--text-light);
+}
+
+/* ====
+6. RESPONSIVE
+==== */
+@media (max-width: 991.98px) {
+/* Header ocupa todo el ancho en móvil */
+.main-header,
+.sidebar ~ .main-header, /* Anula regla de coordinación */
+.sidebar-minimize .main-header,
+.sidebar-collapsed ~ .main-header {
+    width: 100%;
+    left: 0;
+}
+
+/* Reducir padding horizontal del header en móviles */
+.main-header .navbar-header {
+    padding: 0.5rem 1rem;
+}
+}
+
+@media (max-width: 767px) {
+/* Ajustar tamaño dropdown usuario en pantallas pequeñas */
+.topbar-user .dropdown-user {
+    min-width: var(--user-dropdown-min-width-mobile, 90vw);
+    max-width: var(--user-dropdown-max-width-mobile, 300px);
+}
+
+/* Ajustar tamaño avatar en user-box móvil */
+.avatar-lg {
+    width: var(--avatar-lg-mobile-size, 50px);
+    height: var(--avatar-lg-mobile-size, 50px);
+    min-width: var(--avatar-lg-mobile-size, 50px);
+}
+}

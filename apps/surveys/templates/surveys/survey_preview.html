@@ -1,0 +1,283 @@
+{% extends "surveys/base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block page_title %}{{ survey.title }} - {% trans "Preview" %}{% endblock %}
+
+{% block header %}
+    <div class="d-flex justify-content-between align-items-center">
+        <span>{% trans "Preview:" %} {{ survey.title }}</span>
+        <a href="{% url 'encuestas:survey_detail' survey.id %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> {% trans "Back to Survey" %}
+        </a>
+    </div>
+{% endblock %}
+
+{% block page_content %}
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-light">
+        <div class="alert alert-info mb-0">
+            <i class="bi bi-info-circle-fill me-2"></i>
+            {% trans "This is a preview of how your survey will appear to respondents. No responses will be recorded." %}
+        </div>
+    </div>
+    <div class="card-body">
+        <h1 class="h3 mb-3">{{ survey.title }}</h1>
+        {% if survey.description %}
+            <div class="mb-4">{{ survey.description|linebreaks }}</div>
+        {% endif %}
+        
+        <form id="survey-preview-form">
+            {% csrf_token %}
+            
+            {% if questions %}
+                {% for question in questions %}
+                    <div class="mb-4 p-3 border rounded question-container" id="question-{{ question.id }}">
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" for="q_{{ question.id }}">
+                                {{ question.text }}
+                                {% if question.is_required %}
+                                    <span class="text-danger">*</span>
+                                {% endif %}
+                            </label>
+                            {% if question.help_text %}
+                                <div class="form-text mb-2">{{ question.help_text }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if question.question_type.name == 'TEXT' %}
+                            <input type="text" class="form-control" id="q_{{ question.id }}" name="q_{{ question.id }}" 
+                                {% if question.is_required %}required{% endif %}>
+                                
+                        {% elif question.question_type.name == 'TEXT_AREA' %}
+                            <textarea class="form-control" id="q_{{ question.id }}" name="q_{{ question.id }}" rows="3"
+                                {% if question.is_required %}required{% endif %}></textarea>
+                                
+                        {% elif question.question_type.name == 'SINGLE_CHOICE' %}
+                            {% for choice in question.choices.all %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="q_{{ question.id }}" 
+                                        id="q_{{ question.id }}_{{ choice.id }}" value="{{ choice.value }}"
+                                        {% if question.is_required %}required{% endif %}>
+                                    <label class="form-check-label" for="q_{{ question.id }}_{{ choice.id }}">
+                                        {{ choice.text }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                            
+                        {% elif question.question_type.name == 'MULTIPLE_CHOICE' %}
+                            {% for choice in question.choices.all %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="q_{{ question.id }}_{{ choice.id }}" 
+                                        id="q_{{ question.id }}_{{ choice.id }}" value="{{ choice.value }}">
+                                    <label class="form-check-label" for="q_{{ question.id }}_{{ choice.id }}">
+                                        {{ choice.text }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                            
+                        {% elif question.question_type.name == 'RATING' %}
+                            <div class="rating-container">
+                                {% if question.choices.exists %}
+                                    <div class="btn-group" role="group">
+                                        {% for choice in question.choices.all %}
+                                            <input type="radio" class="btn-check" name="q_{{ question.id }}" 
+                                                   id="q_{{ question.id }}_{{ choice.id }}" value="{{ choice.value }}"
+                                                   {% if question.is_required %}required{% endif %}>
+                                            <label class="btn btn-outline-primary" for="q_{{ question.id }}_{{ choice.id }}">
+                                                {{ choice.text }}
+                                            </label>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <!-- Numeric rating slider -->
+                                    <div class="range-container">
+                                        <input type="range" class="form-range" min="{{ question.min_value|default:1 }}" 
+                                               max="{{ question.max_value|default:10 }}" step="1" 
+                                               id="q_{{ question.id }}" name="q_{{ question.id }}"
+                                               {% if question.is_required %}required{% endif %}>
+                                        <div class="d-flex justify-content-between">
+                                            <span>{{ question.min_value|default:1 }}</span>
+                                            <span>{{ question.max_value|default:10 }}</span>
+                                        </div>
+                                        <div class="text-center mt-2">
+                                            <span class="selected-value">5</span>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                        {% elif question.question_type.name == 'DATE' %}
+                            <input type="date" class="form-control" id="q_{{ question.id }}" name="q_{{ question.id }}"
+                                  {% if question.is_required %}required{% endif %}>
+                                  
+                        {% elif question.question_type.name == 'NUMBER' %}
+                            <input type="number" class="form-control" id="q_{{ question.id }}" name="q_{{ question.id }}"
+                                  {% if question.min_value is not None %}min="{{ question.min_value }}"{% endif %}
+                                  {% if question.max_value is not None %}max="{{ question.max_value }}"{% endif %}
+                                  {% if question.is_required %}required{% endif %}>
+                                  
+                        {% elif question.question_type.name == 'YES_NO' %}
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="q_{{ question.id }}" 
+                                       id="q_{{ question.id }}_yes" value="Yes"
+                                       {% if question.is_required %}required{% endif %}>
+                                <label class="form-check-label" for="q_{{ question.id }}_yes">
+                                    {% trans "Yes" %}
+                                </label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="q_{{ question.id }}" 
+                                       id="q_{{ question.id }}_no" value="No"
+                                       {% if question.is_required %}required{% endif %}>
+                                <label class="form-check-label" for="q_{{ question.id }}_no">
+                                    {% trans "No" %}
+                                </label>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+                
+                <div class="mt-4 mb-3 text-center">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-check-circle"></i> {% trans "Submit" %}
+                    </button>
+                </div>
+            {% else %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    {% trans "This survey doesn't have any questions yet." %}
+                </div>
+                <div class="text-center">
+                    <a href="{% url 'encuestas:survey_detail' survey.id %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> {% trans "Add Questions" %}
+                    </a>
+                </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Manejo de formulario de vista previa
+        const previewForm = document.getElementById('survey-preview-form');
+        if (previewForm) {
+            previewForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Simular envío con animación
+                const submitBtn = previewForm.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Procesando...';
+                
+                // Esperar y luego mostrar mensaje
+                setTimeout(function() {
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                    
+                    // Mostrar mensaje modal
+                    const modal = document.createElement('div');
+                    modal.className = 'modal fade';
+                    modal.id = 'previewModal';
+                    modal.setAttribute('tabindex', '-1');
+                    modal.innerHTML = `
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-success text-white">
+                                    <h5 class="modal-title">
+                                        <i class="bi bi-check-circle me-2"></i>
+                                        {% trans "Preview Form Submitted" %}
+                                    </h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p>{% trans "This is only a preview. Your submission was not recorded." %}</p>
+                                    <p>{% trans "In a real survey, respondents would see a confirmation message and their answers would be saved to the database." %}</p>
+                                </div>
+                                <div class="modal-footer">
+                                    <a href="{% url 'encuestas:survey_detail' survey.id %}" class="btn btn-primary">
+                                        <i class="bi bi-arrow-left"></i> {% trans "Back to Survey" %}
+                                    </a>
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Close" %}</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.body.appendChild(modal);
+                    const bsModal = new bootstrap.Modal(modal);
+                    bsModal.show();
+                    
+                    // Limpiar el DOM cuando se cierre
+                    modal.addEventListener('hidden.bs.modal', function() {
+                        modal.remove();
+                    });
+                    
+                }, 1000);
+            });
+        }
+        
+        // Actualización de valor para los sliders de calificación
+        const ratingSliders = document.querySelectorAll('input[type="range"]');
+        ratingSliders.forEach(slider => {
+            const valueDisplay = slider.closest('.range-container').querySelector('.selected-value');
+            
+            // Establecer valor inicial
+            valueDisplay.textContent = slider.value;
+            
+            // Actualizar al cambiar
+            slider.addEventListener('input', function() {
+                valueDisplay.textContent = this.value;
+            });
+        });
+        
+        // Lógica para mostrar/ocultar preguntas condicionales
+        // Esta es una simulación para la vista previa
+        function updateConditionalQuestions() {
+            {% for question in questions %}
+                {% if question.dependent_on %}
+                    const dependentQuestion = document.getElementById('question-{{ question.id }}');
+                    const parentQuestion = document.querySelector('[name="q_{{ question.dependent_on.id }}"]');
+                    
+                    if (parentQuestion) {
+                        const dependentValue = '{{ question.dependent_value }}';
+                        let shouldShow = false;
+                        
+                        // Verificar si la pregunta padre tiene el valor requerido
+                        if (parentQuestion.type === 'radio') {
+                            // Para radio buttons
+                            const selectedRadio = document.querySelector('[name="q_{{ question.dependent_on.id }}"]:checked');
+                            shouldShow = selectedRadio && (dependentValue === '' || selectedRadio.value === dependentValue);
+                        } else if (parentQuestion.type === 'checkbox') {
+                            // Para checkboxes
+                            const checkboxes = document.querySelectorAll('[name^="q_{{ question.dependent_on.id }}_"]:checked');
+                            shouldShow = checkboxes.length > 0 && (dependentValue === '' || 
+                                Array.from(checkboxes).some(cb => cb.value === dependentValue));
+                        } else {
+                            // Para otros tipos de input
+                            shouldShow = parentQuestion.value && (dependentValue === '' || parentQuestion.value === dependentValue);
+                        }
+                        
+                        // Mostrar u ocultar la pregunta dependiente
+                        dependentQuestion.style.display = shouldShow ? 'block' : 'none';
+                    }
+                {% endif %}
+            {% endfor %}
+        }
+        
+        // Escuchar cambios en todas las entradas del formulario
+        const formInputs = previewForm.querySelectorAll('input, select, textarea');
+        formInputs.forEach(input => {
+            input.addEventListener('change', updateConditionalQuestions);
+        });
+        
+        // Inicializar estado de preguntas condicionales
+        updateConditionalQuestions();
+    });
+</script>
+{% endblock %}

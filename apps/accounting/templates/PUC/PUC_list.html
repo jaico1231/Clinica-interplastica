@@ -1,0 +1,483 @@
+{% extends 'index.html'%}
+
+{% block title %} {{ title }} {% endblock %}
+
+{% load static %}
+{% load custom_filters %}
+{% block stylesheets %}
+<link href="https://cdn.datatables.net/v/bs5/dt-1.13.8/fh-3.4.0/datatables.min.css" rel="stylesheet">
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/fixedheader/3.4.0/js/dataTables.fixedHeader.min.js"></script>
+<style>
+    .principal {
+        margin-top: 60px;
+        position: relative; /* Para el posicionamiento de elementos internos */
+    }
+    .card {
+        overflow: hidden; /* Evita que el contenido sobresalga */
+    }
+    
+    .table-responsive {
+        overflow-x: auto; /* Permite el desplazamiento horizontal solo si es necesario */
+    }
+    
+    .table {
+        width: 100%; /* Asegura que la tabla use el 100% del ancho del contenedor */
+        min-width: 300px; /* Establece un ancho mínimo para evitar que se colapse */
+        text-transform: uppercase; /* Convierte el texto a mayúsculas */
+    }
+    .configuracion {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background-color: white;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+        border-radius: 5px;
+    }
+
+    .puc-stats {
+    background: #e9ecef;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+  }
+  
+  .puc-table {
+    width: 100%;
+    margin-bottom: 1rem;
+    border-collapse: collapse;
+  }
+  
+  .puc-table th,
+  .puc-table td {
+    padding: 12px 15px;
+    border: 1px solid #dee2e6;
+  }
+  
+  .puc-table thead th {
+    background-color: #f8f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  
+  .card-body {
+    padding-top: 80px; /* Espacio para evitar que el header tape el contenido */
+  }
+  
+  .table-container {
+    max-height: 70vh;
+    overflow-y: auto;
+    margin-top: 20px;
+  }
+  
+  .cuenta-grupo {
+    background-color: #e3f2fd;
+    font-weight: bold;
+  }
+  
+  .cuenta-mayor {
+    background-color: #e8f5e9;
+  }
+  
+  .subcuenta {
+    background-color: #fff8e1;
+  }
+  
+  .cuenta-detalle {
+    background-color: #fce4ec;
+  }
+  
+  .cuenta-auxiliar {
+    background-color: #f3e5f5;
+  }
+  #data thead th {
+    position: sticky;
+    top: 0;
+    background-color: #f8f9fa;
+    z-index: 20;
+    border-bottom: 2px solid #dee2e6;
+}
+  .search-box {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 16px;
+  }
+  
+  .badge-level {
+    display: inline-block;
+    padding: 3px 7px;
+    border-radius: 10px;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+  }
+  
+  .badge-grupo { background-color: #007bff; }
+  .badge-mayor { background-color: #28a745; }
+  .badge-sub { background-color: #ffc107; color: #000; }
+  .badge-detalle { background-color: #dc3545; }
+  .badge-aux { background-color: #6f42c1; }
+  
+  .btn-action {
+    margin-left: 5px;
+  }
+</style>
+{% endblock stylesheets %}
+
+{% block content %}
+{% if messages %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        {% for message in messages %}
+            {% if message.tags == 'success' %}
+                const icon = 'success';
+            {% elif message.tags == 'error' or message.tags == 'danger' %}
+                const icon = 'error';
+            {% elif message.tags == 'warning' %}
+                const icon = 'warning';
+            {% elif message.tags == 'info' %}
+                const icon = 'info';
+            {% else %}
+                const icon = 'info';
+            {% endif %}
+            
+            Swal.fire({
+                title: '{{ message.tags|title|default:"Información" }}',
+                text: '{{ message|escapejs }}',
+                icon: icon,
+                position: 'center',
+                showConfirmButton: false,
+                timer: 1500,
+                timerProgressBar: true,
+                width: '32em',
+                padding: '1.25em'
+            });
+        {% endfor %}
+    });
+</script>
+{% endif %}
+<div class="row ">
+    <div class="col-md-12">
+        <div class="card principal">
+            <div class="card-header card-header-primary">
+                <h4 class="card-title">{{ title }}</h4>
+            </div>
+            <div class="card-body configuracion">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-lg-12 d-flex align-items-stretch">
+                            <div class="card w-100">
+                                <div class="card-body">
+                                    <div class="d-sm-flex d-block align-items-center justify-content-between mb-9">
+                                        <div class="card-body configuracion">
+                                            <div class="puc-stats">
+                                                <h4>Estadísticas Generales:</h4>
+                                                <div class="table-container table-responsive">
+                                                    <table class="table table-striped" style="width:100%">
+                                                        <tr>
+                                                            <th>Grupos</th>
+                                                            <th>Cuentas Mayor</th>
+                                                            <th>Subcuentas</th>
+                                                            <th>Cuentas Detalle</th>
+                                                            <th>Cuentas Auxiliares</th>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>{{ total_grupos }}</td>
+                                                            <td>{{ total_cuentas_mayor }}</td>
+                                                            <td>{{ total_subcuentas }}</td>
+                                                            <td>{{ total_cuentas_detalle }}</td>
+                                                            <td>{{ total_cuentas_auxiliares }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td colspan="2"><p>ADICIOANR CUENTAS PERSONALIZADAS</p></td>
+                                                            <td><button class="btn btn-sm btn-primary BtnSubCuentaCreate">
+                                                                <i class="material-icons btn-xs">add</i> 
+                                                            </button></td>
+                                                            <td>
+                                                                <button class="btn btn-sm btn-primary BtnCuentaDetalleCreate">
+                                                                    <i class="material-icons btn-xs">add</i> 
+                                                                </button>
+                                                            </td>
+                                                            <td>
+                                                                <button class="btn btn-sm btn-primary BtnCuentaAuxiliarCreate">
+                                                                    <i class="material-icons btn-xs">add</i> 
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </div>                                            
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-lg-12 d-flex align-items-stretch">
+                            <div class="card w-100">
+                                <div class="card-body">
+                                    <div class="d-sm-flex d-block align-items-center justify-content-between mb-9">
+                                        <div class="card-body">
+                                            <div class="profile-container">
+                                                <div class="table-container table-responsive">
+                                                    <table class="table table-striped" style="width:100%" id="data">
+                                                        <thead>
+                                                            <tr>
+                                                                <th width="15%">Código</th>
+                                                                <th width="25%">Nombre</th>
+                                                                <th width="15%">Tipo</th>
+                                                                <th width="15%">Acciones</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for grupo in grupos_cuenta %}
+                                                            <tr class="cuenta-grupo">
+                                                                <td>{{ grupo.code }}</td>
+                                                                <td>{{ grupo.name }}</td>
+                                                                <td><span class="badge-level badge-grupo">Grupo</span></td>
+                                                                <td>
+                                                                    {% if grupo.created_by %}
+                                                                    <button class="btn btn-sm btn-warning btn-action" data-id="{{ grupo.id }}">
+                                                                        <i class="material-icons btn-xs">edit</i>
+                                                                    </button>
+                                                                    <button class="btn btn-sm btn-danger btn-action" data-id="{{ grupo.id }}">
+                                                                        <i class="material-icons btn-xs">delete</i>
+                                                                    </button>
+                                                                    {% endif %}
+                                                                </td>
+                                                            </tr>
+                                                            
+                                                            {% for cuenta_mayor in grupo.cuentas_mayor.all %}
+                                                            <tr class="cuenta-mayor">
+                                                                <td>{{ cuenta_mayor.code }}</td>
+                                                                <td>{{ cuenta_mayor.name }}</td>
+                                                                <td><span class="badge-level badge-mayor">Cuenta Mayor</span></td>
+                                                                <td>
+                                                                    {% if cuenta_mayor.created_by %}
+                                                                    <button class="btn btn-sm btn-warning btn-action" data-id="{{ cuenta_mayor.id }}">
+                                                                        <i class="material-icons btn-xs">edit</i>
+                                                                    </button>
+                                                                    <button class="btn btn-sm btn-danger btn-action" data-id="{{ cuenta_mayor.id }}">
+                                                                        <i class="material-icons btn-xs">delete</i>
+                                                                    </button>
+                                                                    {% endif %}
+                                                                </td>
+                                                            </tr>
+                                                            
+                                                            {% for subcuenta in cuenta_mayor.subcuentas.all %}
+                                                            <tr class="subcuenta">
+                                                                <td>{{ subcuenta.code }}</td>
+                                                                <td>{{ subcuenta.name }}</td>
+                                                                <td><span class="badge-level badge-sub">Subcuenta</span></td>
+                                                                <td>
+                                                                    {% if subcuenta.created_by %}
+                                                                    <button class="btn btn-sm btn-warning btn-action BtnSubCuentaEdit" data-id="{{ subcuenta.id }}">
+                                                                        <i class="material-icons btn-xs">edit</i>
+                                                                    </button>
+                                                                    <button class="btn btn-sm btn-danger btn-action BtnSubCuentaDelete" data-id="{{ subcuenta.id }}">
+                                                                        <i class="material-icons btn-xs">delete</i>
+                                                                    </button>
+                                                                    {% endif %}
+                                                                </td>
+                                                            </tr>
+                                                            
+                                                            {% for detalle in subcuenta.cuentas_detalle.all %}
+                                                            <tr class="cuenta-detalle">
+                                                                <td>{{ detalle.code }}</td>
+                                                                <td>{{ detalle.name }}</td>
+                                                                <td><span class="badge-level badge-detalle">Cuenta Detalle</span></td>
+                                                                <td>
+                                                                    {% if detalle.created_by %}
+                                                                    <button class="btn btn-sm btn-warning btn-action BtnCuentaDetalleEdit" data-id="{{ detalle.id }}">
+                                                                        <i class="material-icons btn-xs">edit</i>
+                                                                    </button>
+                                                                    <button class="btn btn-sm btn-danger btn-action BtnCuentaDetalleDelete" data-id="{{ detalle.id }}">
+                                                                        <i class="material-icons btn-xs">delete</i>
+                                                                    </button>
+                                                                    {% endif %}
+                                                                </td>
+                                                            </tr>
+                                                            
+                                                            {% for auxiliar in detalle.cuentas_auxiliares.all %}
+                                                            <tr class="cuenta-auxiliar">
+                                                                <td>{{ auxiliar.code }}</td>
+                                                                <td>{{ auxiliar.name }}</td>
+                                                                <td>{{ auxiliar.company.name }}</td>
+                                                                <td><span class="badge-level badge-aux">Cuenta Auxiliar</span></td>
+                                                                <td>
+                                                                    {% if auxiliar.created_by %}
+                                                                    <button class="btn btn-sm btn-warning btn-action BtnCuentaAuxEdit" data-id="{{ auxiliar.id }}">
+                                                                        <i class="material-icons btn-xs">edit</i>
+                                                                    </button>
+                                                                    <button class="btn btn-sm btn-danger btn-action BtnCuentaAuxDelete" data-id="{{ auxiliar.id }}">
+                                                                        <i class="material-icons btn-xs">delete</i>
+                                                                    </button>
+                                                                    {% endif %}
+                                                                </td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                            {% endfor %}
+                                                            {% endfor %}
+                                                            {% endfor %}
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block javascripts %}
+<script>
+    var table = new DataTable('#data', {
+        responsive: true,
+        order: [[0, 'asc']],
+        columnDefs: [
+            { type: 'natural', targets: 0 } // Usar ordenamiento natural para la columna de código
+        ],
+        language: {
+            url: 'http://cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish_Mexico.json'
+        },
+        fixedHeader: true, // Habilitar encabezado fijo
+        scrollY: '60vh', // Altura máxima de la tabla con desplazamiento vertical
+        scrollCollapse: true // Colapsar la tabla cuando no sea necesario el scroll
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ajustar posición del contenido para evitar que el header lo tape
+        function adjustContentPosition() {
+            const headerHeight = document.querySelector('.card-header') ? 
+                document.querySelector('.card-header').offsetHeight : 0;
+            
+            if (headerHeight > 0) {
+                document.querySelector('.card-body').style.paddingTop = (headerHeight + 20) + 'px';
+            }
+        }
+        
+        // Ejecutar al cargar y cuando cambie el tamaño de la ventana
+        adjustContentPosition();
+        window.addEventListener('resize', adjustContentPosition);
+        
+        // Funcionalidad de búsqueda
+        const searchInput = document.getElementById('searchInput');
+        
+        if (searchInput) {
+            searchInput.addEventListener('keyup', function() {
+                const searchTerm = this.value.toLowerCase();
+                const table = document.getElementById('pucTable');
+                const rows = table.getElementsByTagName('tr');
+                
+                for (let i = 1; i < rows.length; i++) {
+                    const row = rows[i];
+                    const code = row.cells[0].textContent.toLowerCase();
+                    const name = row.cells[1].textContent.toLowerCase();
+                    const description = row.cells[2].textContent.toLowerCase();
+                    
+                    if (code.includes(searchTerm) || name.includes(searchTerm) || description.includes(searchTerm)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                }
+            });
+        }
+        
+        // Ajustar posición al cambiar el tamaño de la ventana
+        window.addEventListener('resize', function() {
+            const configuracionHeight = document.querySelector('.configuracion').offsetHeight;
+            const contentArea = document.querySelector('.content-area');
+            if (contentArea) {
+                contentArea.style.paddingTop = configuracionHeight + 'px';
+            }
+        });
+    });
+</script>
+<script>
+    // Botones para crear (estos no cambian)
+    $('.BtnSubCuentaCreate').click(function() {        
+        var url = "{% url 'contabilidad:subcuenta_create' %}";
+        var btn = $(this)[0];
+        loadModalAndHandleForm(btn, url);
+    });
+    
+    $('.BtnCuentaDetalleCreate').click(function() {        
+        var url = "{% url 'contabilidad:cuentadetalle_create' %}";
+        var btn = $(this)[0];
+        loadModalAndHandleForm(btn, url);
+    });
+    
+    $('.BtnCuentaAuxiliarCreate').click(function() {        
+        var url = "{% url 'contabilidad:cuentaauxiliar_create' %}";
+        var btn = $(this)[0];
+        loadModalAndHandleForm(btn, url);
+    });
+    
+    // Botones SubCuenta con valor numérico distintivo
+    $('.BtnSubCuentaEdit').click(function() {
+        var id = $(this).data('id');
+        var url = "{% url 'contabilidad:subcuenta_edit' 999999 %}".replace('999999', id);
+        var btn = $(this)[0];
+        loadModalAndHandleForm(btn, url);
+    });
+    
+    $('.BtnSubCuentaDelete').click(function() {
+        var id = $(this).data('id');
+        var url = "{% url 'contabilidad:subcuenta_delete' 999999 %}".replace('999999', id);
+        var btn = $(this)[0];
+        loadModalAndHandleForm(btn, url);
+    });
+    
+    // Botones Cuenta Detalle con valor numérico distintivo
+    $('.BtnCuentaDetalleEdit').click(function() {
+        var id = $(this).data('id');
+        var url = "{% url 'contabilidad:cuentadetalle_edit' 999999 %}".replace('999999', id);
+        var btn = $(this)[0];
+        loadModalAndHandleForm(btn, url);
+    });
+    
+    $('.BtnCuentaDetalleDelete').click(function() {
+        var id = $(this).data('id');
+        var url = "{% url 'contabilidad:cuentadetalle_delete' 999999 %}".replace('999999', id);
+        var btn = $(this)[0];
+        loadModalAndHandleForm(btn, url);
+    });
+    
+    // Botones Cuenta Auxiliar con valor numérico distintivo
+    $('.BtnCuentaAuxEdit').click(function() {
+        var id = $(this).data('id');
+        var url = "{% url 'contabilidad:cuentaauxiliar_edit' 999999 %}".replace('999999', id);
+        var btn = $(this)[0];
+        loadModalAndHandleForm(btn, url);
+    });
+    
+    $('.BtnCuentaAuxDelete').click(function() {
+        var id = $(this).data('id');
+        var url = "{% url 'contabilidad:cuentaauxiliar_delete' 999999 %}".replace('999999', id);
+        var btn = $(this)[0];
+        loadModalAndHandleForm(btn, url);
+    });
+</script>
+{% endblock javascripts %}

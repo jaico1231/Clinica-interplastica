@@ -1,0 +1,351 @@
+{% extends 'index.html' %}
+{% load static %}
+{% load custom_filters %}
+{% load i18n %}
+
+{% block stylesheets %}
+<link href="https://cdn.datatables.net/v/bs5/dt-1.13.8/fh-3.4.0/datatables.min.css" rel="stylesheet">
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/fixedheader/3.4.0/js/dataTables.fixedHeader.min.js"></script>
+<style>
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .loading-content {
+        text-align: center;
+    }
+    .card-header {
+        overflow: hidden; /* Evita que el contenido sobresalga */
+        margin-top: 60px; /* Ajuste para el encabezado fijo */
+    }
+    
+    .status-new {
+        background-color: #d4edda;
+    }
+    .status-update {
+        background-color: #d1ecf1;
+    }
+    .status-error {
+        background-color: #f8d7da;
+    }
+    .preview-table {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    .field-required {
+        font-weight: bold;
+        color: #721c24;
+    }
+</style>
+{% endblock stylesheets %}
+
+{% block content %}
+{% if messages %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {% for message in messages %}
+                {% if message.tags == 'success' %}
+                    const icon = 'success';
+                {% elif message.tags == 'error' or message.tags == 'danger' %}
+                    const icon = 'error';
+                {% elif message.tags == 'warning' %}
+                    const icon = 'warning';
+                {% elif message.tags == 'info' %}
+                    const icon = 'info';
+                {% else %}
+                    const icon = 'info';
+                {% endif %}
+                
+                Swal.fire({
+                    title: '{{ message.tags|title|default:"Información" }}',
+                    text: '{{ message|escapejs }}',
+                    icon: icon,
+                    position: 'center',
+                    showConfirmButton: false,
+                    timer: 1500,
+                    timerProgressBar: true,
+                    width: '32em',
+                    padding: '1.25em'
+                });
+            {% endfor %}
+        });
+    </script>
+{% endif %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">{{ title }}</h3>
+        <div class="card-tools">
+            <a href="{{ list_url }}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if preview %}
+            {# Vista previa de importación #}
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-info-circle"></i> Resumen de Importación</h5>
+                        <ul>
+                            <li>Total de registros: <strong>{{ total_rows }}</strong></li>
+                            <li>Registros válidos: <strong>{{ total_valid }}</strong></li>
+                            <li>Registros con errores: <strong>{{ total_invalid }}</strong></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h5 class="card-title">Leyenda</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex mb-2">
+                                <div class="mr-2" style="width: 20px; height: 20px; background-color: #d4edda;"></div>
+                                <div>Nuevo registro</div>
+                            </div>
+                            <div class="d-flex mb-2">
+                                <div class="mr-2" style="width: 20px; height: 20px; background-color: #d1ecf1;"></div>
+                                <div>Actualizar registro existente</div>
+                            </div>
+                            <div class="d-flex">
+                                <div class="mr-2" style="width: 20px; height: 20px; background-color: #f8d7da;"></div>
+                                <div>Error - No se importará</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> Esta es una vista previa de los primeros registros. Revise cuidadosamente antes de confirmar la importación.
+            </div>
+
+            <div class="preview-table table-responsive">
+                <table class="table table-bordered table-hover" id="preview-table">
+                    <thead>
+                        <tr>
+                            <th>Estado</th>
+                            {% for field in fieldnames %}
+                                <th>{{ field }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in validated_rows %}
+                            <tr class="status-{{ row.status }}">
+                                <td>
+                                    {% if row.status == 'new' %}
+                                        <span class="badge badge-success">Nuevo</span>
+                                    {% elif row.status == 'update' %}
+                                        <span class="badge badge-info">Actualizar</span>
+                                    {% else %}
+                                        <span class="badge badge-danger">Error</span>
+                                    {% endif %}
+                                    <small>{{ row.message }}</small>
+                                </td>
+                                {% for field in fieldnames %}
+                                    <td>{{ row.data|get_item:field|default:"-" }}</td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-4">
+                <form id="confirm-import-form" method="post" action="{{ request.path }}">
+                    {% csrf_token %}
+                    <input type="hidden" name="confirm_import" value="1">
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ request.path }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                        <button id="confirm-import-btn" type="submit" class="btn btn-primary">
+                            <i class="fas fa-file-import"></i> Confirmar Importación
+                        </button>
+                    </div>
+                </form>
+            </div>
+        {% else %}
+            {# Formulario de carga #}
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h5 class="card-title">Cargar Archivo CSV</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                
+                                <div class="form-group">
+                                    <label for="{{ form.csv_file.id_for_label }}">{{ form.csv_file.label }}</label>
+                                    {{ form.csv_file }}
+                                    <small class="form-text text-muted">{{ form.csv_file.help_text }}</small>
+                                    {% if form.csv_file.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.csv_file.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-upload"></i> Cargar y Previsualizar
+                                </button>
+                                
+                                <a href="?download_template=1" class="btn btn-outline-secondary">
+                                    <i class="fas fa-download"></i> Descargar Plantilla
+                                </a>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h5 class="card-title">Instrucciones</h5>
+                        </div>
+                        <div class="card-body">
+                            <p>Para importar {{ model_name_plural }}, siga estos pasos:</p>
+                            <ol>
+                                <li>Descargue la plantilla CSV usando el botón "Descargar Plantilla"</li>
+                                <li>Complete la plantilla con sus datos</li>
+                                <li>Cargue el archivo CSV completo</li>
+                                <li>Revise la vista previa y confirme la importación</li>
+                            </ol>
+                            
+                            <h6>Campos Disponibles:</h6>
+                            <ul>
+                                {% for field in model_fields %}
+                                    <li {% if field in required_fields %}class="field-required"{% endif %}>
+                                        {{ field }} 
+                                        {% if field in required_fields %}(Requerido){% endif %}
+                                        
+                                        {% with field_type=field_types|get_item:field %}
+                                            {% if field_type == 'foreignkey' %}
+                                                <small class="text-muted">(ID de referencia)</small>
+                                            {% elif field_type == 'integer' %}
+                                                <small class="text-muted">(Número entero)</small>
+                                            {% elif field_type == 'decimal' %}
+                                                <small class="text-muted">(Número decimal)</small>
+                                            {% elif field_type == 'boolean' %}
+                                                <small class="text-muted">(Sí/No)</small>
+                                            {% elif field_type == 'date' %}
+                                                <small class="text-muted">(Fecha: YYYY-MM-DD)</small>
+                                            {% elif field_type == 'datetime' %}
+                                                <small class="text-muted">(Fecha y hora: YYYY-MM-DD HH:MM:SS)</small>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                            
+                            {% if unique_field %}
+                                <div class="alert alert-info mt-3">
+                                    <i class="fas fa-info-circle"></i> Si el campo <strong>{{ unique_field }}</strong> coincide con un registro existente, se actualizará dicho registro.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+<div id="loadingOverlay" class="loading-overlay" style="display: none;">
+    <div class="loading-content">
+        <div class="spinner-border text-primary mb-3" role="status"></div>
+        <h4 class="text-white">Procesando Importación...</h4>
+        <div class="progress mt-2" style="width: 300px;">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+    $(document).ready(function() {
+        // Función auxiliar para añadir feedback visual
+        $('.custom-file-input').on('change', function() {
+            let fileName = $(this).val().split('\\').pop();
+            $(this).next('.custom-file-label').html(fileName);
+        });
+
+        // Mostrar loading overlay al confirmar importación
+        $('#confirm-import-form').on('submit', function(e) {
+            console.log('Formulario de confirmación enviado');
+            $('#loadingOverlay').show(); // Mostrar overlay
+            $('#confirm-import-btn').prop('disabled', true); // Deshabilitar botón
+        });
+
+        // También mostrar overlay en el formulario de carga inicial
+        $('form[enctype="multipart/form-data"]').on('submit', function(e) {
+            console.log('Formulario de carga enviado');
+            if ($(this).find('input[type="file"]').val()) {
+                $('#loadingOverlay').show();
+                $(this).find('button[type="submit"]').prop('disabled', true);
+            }
+        });
+
+        // Agregar log para depuración
+        console.log('Script inicializado. Buscando formularios con IDs específicos.');
+        console.log('Formulario de confirmación encontrado:', $('#confirm-import-form').length);
+        console.log('Overlay encontrado:', $('#loadingOverlay').length);
+
+        // Opcional: Ocultar loader si hay error de validación
+        $(document).ajaxError(function() {
+            $('#loadingOverlay').hide();
+            $('button[type="submit"]').prop('disabled', false);
+        });
+
+        // Para pruebas: exponer función para mostrar/ocultar overlay
+        window.showLoadingOverlay = function() {
+            $('#loadingOverlay').show();
+        };
+        
+        window.hideLoadingOverlay = function() {
+            $('#loadingOverlay').hide();
+        };
+    });
+</script>
+<script>
+    // Inicializar DataTable después que todo esté cargado
+    $(document).ready(function() {
+        if ($('#preview-table').length > 0) {
+            var table = new DataTable('#preview-table', {
+                responsive: true,
+                order: [[0, 'asc']],
+                columnDefs: [
+                    { type: 'natural', targets: 0 } // Usar ordenamiento natural para la columna de código
+                ],
+                language: {
+                    url: 'http://cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish_Mexico.json'
+                },
+                fixedHeader: true, // Habilitar encabezado fijo
+                scrollY: '60vh', // Altura máxima de la tabla con desplazamiento vertical
+                scrollCollapse: true // Colapsar la tabla cuando no sea necesario el scroll
+            });
+            console.log('DataTable inicializada correctamente');
+        } else {
+            console.log('No se encontró la tabla de vista previa');
+        }
+    });
+</script>
+{% endblock %}

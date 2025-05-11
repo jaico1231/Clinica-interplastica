@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% load static %}
+{% load core_tags %}
+
+{% block title %}{{ object }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title">{{ model_verbose_name }}: {{ object }}</h5>
+        <div>
+            <a href="{% url list_url %}" class="btn btn-sm btn-secondary">
+                <i class="fas fa-list"></i> Volver al listado
+            </a>
+            
+            {% if perms.change %}
+            <a href="{% url update_url object.pk %}" class="btn btn-sm btn-warning">
+                <i class="fas fa-edit"></i> Editar
+            </a>
+            {% endif %}
+            
+            {% if perms.delete %}
+            <a href="{% url delete_url object.pk %}" class="btn btn-sm btn-danger">
+                <i class="fas fa-trash"></i> Eliminar
+            </a>
+            {% endif %}
+            
+            {% block extra_buttons %}{% endblock %}
+        </div>
+    </div>
+    
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-12">
+                <dl class="row">
+                    {% for field in object._meta.fields %}
+                    {% if field.name not in "password,is_deleted,deleted_at,deleted_by"|split:"," %}
+                    <dt class="col-sm-3">{{ field.verbose_name|capfirst }}</dt>
+                    <dd class="col-sm-9">
+                        {% with value=object|getattribute:field.name %}
+                            {% if field.name == "is_active" %}
+                                {{ value|yesno_bootstrap }}
+                            {% elif value|default_if_none:"" == "" %}
+                                <span class="text-muted">-</span>
+                            {% elif field.get_internal_type == "ForeignKey" %}
+                                {{ value }}
+                            {% elif field.get_internal_type == "BooleanField" %}
+                                {{ value|yesno_bootstrap }}
+                            {% elif field.get_internal_type == "DateField" or field.get_internal_type == "DateTimeField" %}
+                                {{ value|date:"d/m/Y H:i" }}
+                            {% elif field.get_internal_type == "DecimalField" %}
+                                {{ value|format_currency }}
+                            {% else %}
+                                {{ value }}
+                            {% endif %}
+                        {% endwith %}
+                    </dd>
+                    {% endif %}
+                    {% endfor %}
+                </dl>
+            </div>
+        </div>
+        
+        {% block related_objects %}
+        <!-- Aquí se pueden mostrar objetos relacionados -->
+        {% endblock %}
+    </div>
+    
+    <div class="card-footer text-muted">
+        <div class="row small">
+            <div class="col-md-6">
+                {% if object.created_by %}
+                <p>Creado por: {{ object.created_by }} ({{ object.created_at|date:"d/m/Y H:i" }})</p>
+                {% endif %}
+            </div>
+            <div class="col-md-6 text-end">
+                {% if object.modified_by %}
+                <p>Última modificación: {{ object.modified_by }} ({{ object.modified_at|date:"d/m/Y H:i" }})</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

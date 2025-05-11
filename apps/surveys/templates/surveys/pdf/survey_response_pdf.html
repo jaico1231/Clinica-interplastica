@@ -1,0 +1,101 @@
+<!-- surveys/pdf/survey_response_pdf.html -->
+{% extends "surveys/pdf/pdf_base.html" %}
+{% load survey_tags %}
+
+{% block content %}
+<div class="respondent-info">
+    <h3>Información del Encuestado</h3>
+    <table class="table">
+        <tr>
+            <td style="width: 30%;"><strong>Respondiente:</strong></td>
+            <td>{{ response.respondent|default:"Anónimo" }}</td>
+        </tr>
+        <tr>
+            <td><strong>IP:</strong></td>
+            <td>{{ response.respondent_ip|default:"No registrada" }}</td>
+        </tr>
+        <tr>
+            <td><strong>Fecha de Respuesta:</strong></td>
+            <td>{{ response.created_at|date:"d/m/Y H:i" }}</td>
+        </tr>
+        <tr>
+            <td><strong>Completada:</strong></td>
+            <td>{{ response.is_complete|yesno:"Sí,No" }}</td>
+        </tr>
+    </table>
+</div>
+
+<h3>Respuestas</h3>
+
+{% for question in questions %}
+<div class="question-container">
+    <div class="question-text">{{ forloop.counter }}. {{ question.text }}{% if question.is_required %} *{% endif %}</div>
+    {% if question.description %}
+    <div class="question-description">{{ question.description }}</div>
+    {% endif %}
+    
+    {% with answer=answers_dict|get_item:question.id %}
+    {% with qtype=question.question_type.name %}
+    
+    {% if qtype == 'TEXT' %}
+    <div class="answer-text">{{ answer.text_answer|default:"Sin respuesta" }}</div>
+    
+    {% elif qtype == 'TEXT_AREA' %}
+    <div class="answer-text">{{ answer.text_answer|default:"Sin respuesta"|linebreaks }}</div>
+    
+    {% elif qtype == 'NUMBER' %}
+    <div class="answer-text">{{ answer.number_answer|default:"Sin respuesta" }}</div>
+    
+    {% elif qtype == 'DATE' %}
+    <div class="answer-text">{{ answer.date_answer|date:"d/m/Y"|default:"Sin respuesta" }}</div>
+    
+    {% elif qtype == 'YES_NO' %}
+    <div class="choices">
+        <div class="choice-item">
+            <div class="checkbox {% if answer.boolean_answer %}checked{% endif %}"></div>
+            <div class="choice-text">Sí</div>
+        </div>
+        <div class="choice-item">
+            <div class="checkbox {% if answer.boolean_answer == False %}checked{% endif %}"></div>
+            <div class="choice-text">No</div>
+        </div>
+    </div>
+    
+    {% elif qtype == 'SINGLE_CHOICE' %}
+    <div class="choices">
+        {% for choice in question.choices.all %}
+        <div class="choice-item">
+            <div class="checkbox {% if answer.choices.all|contains:choice %}checked{% endif %}"></div>
+            <div class="choice-text">{{ choice.text }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% elif qtype == 'MULTIPLE_CHOICE' %}
+    <div class="choices">
+        {% for choice in question.choices.all %}
+        <div class="choice-item">
+            <div class="checkbox {% if answer.choices.all|contains:choice %}checked{% endif %}"></div>
+            <div class="choice-text">{{ choice.text }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% elif qtype == 'RATING' %}
+    <div class="choices">
+        {% for choice in question.choices.all %}
+        <div class="choice-item">
+            <div class="checkbox {% if answer.choices.all|contains:choice or answer.text_answer == choice.value %}checked{% endif %}"></div>
+            <div class="choice-text">{{ choice.text }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% endif %}
+    
+    {% endwith %}
+    {% endwith %}
+</div>
+{% endfor %}
+
+{% endblock %}

@@ -1,0 +1,40 @@
+<!-- surveys/pdf_preview.html -->
+{% extends "survey/base.html" %}
+
+{% block title %}Vista Previa PDF - {{ survey.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Vista Previa de {{ preview_type }} - {{ survey.title }}</h5>
+            <div>
+                <a href="{{ download_url }}" class="btn btn-light">
+                    <i class="fas fa-download"></i> Descargar PDF
+                </a>
+                <a href="{% url 'encuestas:survey_detail' survey.id %}" class="btn btn-light ml-2">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </a>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <!-- Vista previa del documento en un iframe -->
+            <div style="height: 800px; width: 100%; overflow: auto;">
+                <iframe id="pdf-preview" style="width: 100%; height: 100%; border: none;" srcdoc="{{ survey_html|escape }}"></iframe>
+            </div>
+        </div>
+        <div class="card-footer text-center">
+            <a href="{{ download_url }}" class="btn btn-primary btn-lg">
+                <i class="fas fa-download"></i> Descargar PDF
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Ajusta el iframe después de que se carga
+    document.getElementById('pdf-preview').onload = function() {
+        this.style.height = (this.contentWindow.document.body.scrollHeight + 50) + 'px';
+    };
+</script>
+{% endblock %}

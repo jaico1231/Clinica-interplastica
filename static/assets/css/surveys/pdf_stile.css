@@ -1,0 +1,50 @@
+/* static/css/pdf_styles.css */
+/* Additional PDF-specific styles can be added here */
+
+@font-face {
+    font-family: 'OpenSans';
+    src: url('../fonts/OpenSans-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'OpenSans';
+    src: url('../fonts/OpenSans-Bold.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
+
+body {
+    font-family: 'OpenSans', Arial, sans-serif;
+}
+
+/* Print-specific styles */
+@page {
+    size: a4 portrait;
+    margin: 2cm;
+}
+
+/* Custom styling for specific elements */
+.checkbox {
+    border-radius: 2px;
+}
+
+.checkbox.checked::after {
+    content: "✓";
+    position: relative;
+    top: -2px;
+    left: 2px;
+    color: white;
+    font-size: 10px;
+}
+
+/* Better spacing for multi-page documents */
+.question-container:last-child {
+    margin-bottom: 30px;
+}
+
+/* Improve table styling */
+.table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}

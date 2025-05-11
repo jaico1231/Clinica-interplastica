@@ -1,0 +1,42 @@
+:root {
+    --header-height: 64px;
+    --sidebar-width: 260px;
+    --sidebar-collapsed-width: 80px;
+}
+
+.main-header {
+    position: fixed;
+    top: 0;
+    left: var(--sidebar-width);
+    width: calc(100% - var(--sidebar-width));
+    height: var(--header-height);
+    z-index: 1030;
+    transition: left 0.3s ease, width 0.3s ease;
+}
+
+/* .main-panel {
+    margin-left: var(--sidebar-width);
+    width: calc(100% - var(--sidebar-width));
+    padding-top: var(--header-height);
+    min-height: 100vh;
+    transition: all var(--transition-speed) ease;
+} */
+
+
+/* Cuando el sidebar está colapsado */
+.sidebar-collapsed .main-header,
+.sidebar-collapsed .main-panel {
+    left: var(--sidebar-collapsed-width);
+    width: calc(100% - var(--sidebar-collapsed-width));
+    margin-left: var(--sidebar-collapsed-width);
+}
+
+/* En móviles */
+@media (max-width: 991px) {
+    .main-header,
+    .main-panel {
+        left: 0;
+        width: 100%;
+        margin-left: 0;
+    }
+}

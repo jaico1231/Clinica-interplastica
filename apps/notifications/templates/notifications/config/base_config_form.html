@@ -1,0 +1,32 @@
+{% extends "index.html" %}
+{% load crispy_forms_tags %} 
+
+{% block content %}
+<div class="row">
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-body-transparent">
+        <div class="container-fluid">
+          <div class="row mb-3">
+            <div class="col-md-12">
+              <div class="card search-card">
+                <div class="card-header card-header-primary">
+                    <h4 class="card-title"> {{ tittle }}</h5>
+                </div>
+                <div class="card-body">
+                  <form method="post">
+                      {% csrf_token %}
+                      {% crispy form %} {# O usa {{ form.as_p }}, {{ form.as_table }}, etc. #}
+                      <button type="submit" class="btn btn-success">Save Configuration</button>
+                      <a href="{{ cancel_url }}" class="btn btn-secondary">Cancel</a>
+                  </form>
+                </div>
+              </div>
+            </div>  
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
