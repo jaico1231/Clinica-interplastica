@@ -6,7 +6,7 @@ from django.views.generic import CreateView, UpdateView, ListView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 
 from apps.base.forms.companyform import CompanyForm
-from apps.base.models.company import Company
+from apps.base.models.company import Company, CompanyArea
 
 class CompanyCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = Company
@@ -65,3 +65,12 @@ class CompanyUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView)
     def form_invalid(self, form):
         messages.error(self.request, _('Error al actualizar la empresa. Por favor, revise los datos ingresados.'))
         return super().form_invalid(form)
+
+class AreaListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    model = CompanyArea
+    template_name = 'core/list.html'
+    permission_required = 'base.view_company'
+
+    search_fields = []
+    order_by=()
+    

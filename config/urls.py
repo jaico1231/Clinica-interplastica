@@ -27,4 +27,5 @@ urlpatterns = [
     path('', include('apps.notifications.urls')),
     path('', include('apps.audit.urls.auditUrls')),
     path('', include('apps.surveys.urls.surveyUrls')),
+    path('', include('apps.waste.urls.WasteUrls')),
 ]

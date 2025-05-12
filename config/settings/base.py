@@ -68,6 +68,7 @@ LOCAL_APPS = [
     'apps.dashboard',
     'apps.notifications',
     'apps.surveys',
+    'apps.waste',
     # 'apps.chatbot',
 
 ]
@@ -143,6 +144,13 @@ AUDIT_MODELS = [
     'third_party.ThirdParty',
     'third_party.ThirdPartyAttachment',
 
+    #waste
+    'waste.WasteManager',
+    'waste.WasteType',
+    'waste.WasteRecord',
+    'waste.WasteDestination',
+    'waste.WasteMediaFile',
+    'waste.WasteIndicator',
     # Chat
     # 'chatbot.ChatUser',
     # 'chatbot.Conversation',

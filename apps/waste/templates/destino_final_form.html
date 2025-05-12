@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario de Destino Final de Residuos</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #27ae60;
+            --light: #ecf0f1;
+            --dark: #34495e;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --info: #3498db;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: white;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        
+        .form-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--primary);
+            border-bottom: 2px solid var(--secondary);
+            padding-bottom: 1rem;
+        }
+        
+        .form-subtitle {
+            color: var(--dark);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 0 -10px;
+        }
+        
+        .form-col {
+            flex: 1;
+            padding: 0 10px;
+            min-width: 250px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--secondary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
+        }
+        
+        .form-control-file {
+            padding: 0.5rem 0;
+        }
+        
+        .form-text {
+            display: block;
+            margin-top: 0.25rem;
+            color: #6c757d;
+            font-size: 0.875rem;
+        }
+        
+        .status-group {
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .btn {
+            display: inline-block;
+            font-weight: 500;
+            text-align: center;
+            vertical-align: middle;
+            cursor: pointer;
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            line-height: 1.5;
+            border-radius: 4px;
+            transition: all 0.15s ease-in-out;
+            border: none;
+        }
+        
+        .btn-primary {
+            background-color: var(--secondary);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #229954;
+        }
+        
+        .btn-group {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 2rem;
+        }
+        
+        .required:after {
+            content: " *";
+            color: var(--danger);
+        }
+        
+        @media (max-width: 768px) {
+            .form-col {
+                flex: 100%;
+                margin-bottom: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-header">
+            <h1>Destino Final de Residuos</h1>
+            <p>Registro de información sobre el destino final y tratamiento de residuos</p>
+        </div>
+        
+        <form id="wasteDestinationForm" method="post" enctype="multipart/form-data">
+            <h3 class="form-subtitle">Información Básica</h3>
+            <div class="form-row">
+                <div class="form-col">
+                    <div class="form-group">
+                        <label for="departure_date" class="required">Fecha de Salida</label>
+                        <input type="date" id="departure_date" name="departure_date" class="form-control" required>
+                    </div>
+                </div>
+                
+                <div class="form-col">
+                    <div class="form-group">
+                        <label for="manager" class="required">Gestor de Residuos</label>
+                        <select id="manager" name="manager" class="form-control" required>
+                            <option value="">Seleccione un gestor</option>
+                            <!-- Options would be populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-col">
+                    <div class="form-group">
+                        <label for="waste_type" class="required">Tipo de Residuo</label>
+                        <select id="waste_type" name="waste_type" class="form-control" required>
+                            <option value="">Seleccione el tipo de residuo</option>
+                            <!-- Options would be populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-col">
+                    <div class="form-group">
+                        <label for="quantity" class="required">Cantidad</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="number" id="quantity" name="quantity" step="0.01" min="0" class="form-control" required style="flex: 3;">
+                            <select id="unit" name="unit" class="form-control" style="flex: 1;">
+                                <option value="KG">KG</option>
+                                <option value="TON">TON</option>
+                                <option value="L">L</option>
+                                <option value="M3">M³</option>
+                                <option value="UNIT">UNID</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-col">
+                    <div class="form-group">
+                        <label for="treatment_method" class="required">Método de Tratamiento</label>
+                        <select id="treatment_method" name="treatment_method" class="form-control" required>
+                            <option value="">Seleccione el método</option>
+                            <option value="RECYCLING">Reciclaje</option>
+                            <option value="COMPOSTING">Compostaje</option>
+                            <option value="INCINERATION">Incineración</option>
+                            <option value="LANDFILL">Relleno Sanitario</option>
+                            <option value="SECURITY_CELL">Celda de Seguridad</option>
+                            <option value="ENCAPSULATION">Encapsulación</option>
+                            <option value="OTHER">Otro (Especificar)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-col">
+                    <div class="form-group">
+                        <label for="other_method">Otro Método (Si aplica)</label>
+                        <input type="text" id="other_method" name="other_method" class="form-control" disabled>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-col">
+                    <div class="form-group">
+                        <label for="manifest_number">Número de Manifiesto</label>
+                        <input type="text" id="manifest_number" name="manifest_number" class="form-control">
+                    </div>
+                </div>
+                
+                <div class="form-col">
+                    <div class="form-group">
+                        <label for="status" class="required">Estado</label>
+                        <select id="status" name="status" class="form-control" required>
+                            <option value="SCHEDULED">Programado</option>
+                            <option value="IN_TRANSIT">En Tránsito</option>
+                            <option value="DELIVERED">Entregado</option>
+                            <option value="TREATED">Tratado</option>
+                            <option value="CERTIFIED">Certificado Emitido</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="status-group" id="transportInfo">
+                <h3 class="form-subtitle">Información de Transporte</h3>
+                <div class="form-row">
+                    <div class="form-col">
+                        <div class="form-group">
+                            <label for="carrier">Transportador</label>
+                            <input type="text" id="carrier" name="carrier" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <div class="form-col">
+                        <div class="form-group">
+                            <label for="vehicle_plate">Placa del Vehículo</label>
+                            <input type="text" id="vehicle_plate" name="vehicle_plate" class="form-control">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="status-group" id="deliveryInfo">
+                <h3 class="form-subtitle">Información de Entrega y Tratamiento</h3>
+                <div class="form-row">
+                    <div class="form-col">
+                        <div class="form-group">
+                            <label for="delivery_date">Fecha de Entrega</label>
+                            <input type="date" id="delivery_date" name="delivery_date" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <div class="form-col">
+                        <div class="form-group">
+                            <label for="treatment_date">Fecha de Tratamiento</label>
+                            <input type="date" id="treatment_date" name="treatment_date" class="form-control">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="status-group" id="certificationInfo">
+                <h3 class="form-subtitle">Información de Certificación</h3>
+                <div class="form-row">
+                    <div class="form-col">
+                        <div class="form-group">
+                            <label for="certificate_number">Número de Certificado</label>
+                            <input type="text" id="certificate_number" name="certificate_number" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <div class="form-col">
+                        <div class="form-group">
+                            <label for="certificate_file">Archivo de Certificado</label>
+                            <input type="file" id="certificate_file" name="certificate_file" class="form-control form-control-file">
+                            <small class="form-text">Formatos aceptados: PDF, JPG, PNG (Máx. 5MB)</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="notes">Notas Adicionales</label>
+                <textarea id="notes" name="notes" class="form-control" rows="3"></textarea>
+            </div>
+            
+            <div class="btn-group">
+                <button type="button" class="btn btn-secondary" onclick="window.history.back();">Cancelar</button>
+                <button type="reset" class="btn btn-secondary">Limpiar</button>
+                <button type="submit" class="btn btn-primary">Guardar Registro</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Enable/disable "other_method" field based on treatment_method selection
+        document.getElementById('treatment_method').addEventListener('change', function() {
+            const otherMethodField = document.getElementById('other_method');
+            if (this.value === 'OTHER') {
+                otherMethodField.disabled = false;
+                otherMethodField.required = true;
+            } else {
+                otherMethodField.disabled = true;
+                otherMethodField.required = false;
+                otherMethodField.value = '';
+            }
+        });
+        
+        // Show/hide fields based on status
+        document.getElementById('status').addEventListener('change', function() {
+            const status = this.value;
+            const transportInfo = document.getElementById('transportInfo');
+            const deliveryInfo = document.getElementById('deliveryInfo');
+            const certificationInfo = document.getElementById('certificationInfo');
+            
+            // Control visibility based on status
+            transportInfo.style.display = ['IN_TRANSIT', 'DELIVERED', 'TREATED', 'CERTIFIED'].includes(status) ? 'block' : 'none';
+            deliveryInfo.style.display = ['DELIVERED', 'TREATED', 'CERTIFIED'].includes(status) ? 'block' : 'none';
+            certificationInfo.style.display = ['CERTIFIED'].includes(status) ? 'block' : 'none';
+            
+            // Make fields required based on status
+            if (status === 'CERTIFIED') {
+                document.getElementById('certificate_number').required = true;
+                document.getElementById('certificate_file').required = true;
+            } else {
+                document.getElementById('certificate_number').required = false;
+                document.getElementById('certificate_file').required = false;
+            }
+        });
+        
+        // Initialize form state
+        window.addEventListener('load', function() {
+            // Trigger change events to set initial state
+            document.getElementById('treatment_method').dispatchEvent(new Event('change'));
+            document.getElementById('status').dispatchEvent(new Event('change'));
+        });
+    </script>
+</body>
+</html>

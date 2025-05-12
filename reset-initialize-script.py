@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import os
-import shutil
 import sys
 import django
+import traceback
 from pathlib import Path
 from importlib import import_module
 from django.core.management import call_command
@@ -86,63 +86,130 @@ def reiniciar_base_de_datos():
     print("Aplicando migraciones a la nueva base de datos...")
     call_command('migrate')
 
-def cargar_datos_iniciales():
-    """Ejecuta los comandos de carga de datos iniciales."""
-    print("\n=== CARGANDO DATOS INICIALES ===")
+def ejecutar_comandos_load():
+    """Busca y ejecuta todos los comandos de management que empiezan con 'load_'."""
+    print("\n=== EJECUTANDO COMANDOS DE CARGA DE DATOS ===")
     
-    try:
-        print("Ejecutando: python manage.py load_initials")
-        call_command('load_initials')
-        
-        print("Ejecutando: python manage.py load_puc --level all")
-        call_command('load_puc', level='all')
-        
-        print("Ejecutando: python manage.py Crear_Menu")
-        call_command('Crear_Menu')
-    except Exception as e:
-        print(f"Error al cargar datos iniciales: {e}")
-
-def ejecutar_utils():
-    """Ejecutar las inicializaciones de datos para todas las aplicaciones locales."""
-    print("\n=== EJECUTANDO UTILIDADES DE INICIALIZACIÓN ===")
+    # Primero ejecutar comandos específicos que sabemos que son necesarios
+    comandos_especificos = [
+        {'name': 'load_initials', 'args': {}},
+        {'name': 'load_puc', 'args': {'level': 'all'}},
+        {'name': 'load_waste', 'args': {'level': 'all'}}
+    ]
+    
+    print("Ejecutando comandos específicos prioritarios...")
+    for comando in comandos_especificos:
+        try:
+            print(f"Ejecutando comando: {comando['name']} con argumentos: {comando['args']}")
+            call_command(comando['name'], **comando['args'])
+            print(f"✅ Comando {comando['name']} ejecutado con éxito")
+        except Exception as e:
+            print(f"❌ Error ejecutando {comando['name']}: {str(e)}")
+            print("Detalles del error:")
+            traceback.print_exc()
+    
+    # Luego buscar y ejecutar todos los demás comandos load_*
+    print("\nBuscando otros comandos load_* en todas las aplicaciones...")
     
     for app in settings.INSTALLED_APPS:
         if app.startswith('django.') or app.startswith('rest_framework'):
             continue
 
         try:
-            # Determinar el nombre correcto del módulo para importar
-            module_name = app
-            app_name = app.split('.')[-1].lower()
+            # Determinar el nombre correcto de la aplicación
+            app_name = app.split('.')[-1]
             
-            # Intentar diferentes formas de importar el módulo utils
-            utils_module = None
-            possible_module_paths = [
-                f'{app}.utils',         # apps.myapp.utils
-                f'apps.{app}.utils'     # si app está registrado sin el prefijo 'apps.'
-            ]
-            
-            for module_path in possible_module_paths:
-                try:
-                    utils_module = import_module(module_path)
-                    break
-                except ModuleNotFoundError:
+            # Construir el path del módulo de comandos
+            try:
+                module = import_module(f'{app}.management')
+                commands_path = Path(module.__file__).parent / 'commands'
+                if not commands_path.exists():
                     continue
-            
-            if utils_module is None:
-                print(f"No se encontró el módulo 'utils' en {app}")
+            except (ModuleNotFoundError, AttributeError):
                 continue
+
+            # Buscar comandos de carga (load_*)
+            for command_file in commands_path.glob('*.py'):
+                command_name = command_file.stem
                 
-            # Buscar la función 'datos_iniciales_<app>'
-            func_name = f'datos_iniciales_{app_name}'
-            if hasattr(utils_module, func_name):
-                init_function = getattr(utils_module, func_name)
-                print(f"Ejecutando {func_name} en {app}")
-                init_function()
-            else:
-                print(f"No se encontró la función {func_name} en {app}")
+                # Solo ejecutar comandos que empiecen con 'load_' y no sean los específicos ya ejecutados
+                if (command_name.startswith('load_') and 
+                    command_name != '__init__' and
+                    command_name not in [cmd['name'] for cmd in comandos_especificos]):
+                    
+                    try:
+                        print(f"Ejecutando comando: {command_name} de la app {app_name}")
+                        # Intentar primero con --level all
+                        try:
+                            call_command(command_name, level='all')
+                        except:
+                            # Si falla con --level all, intentar sin argumentos
+                            call_command(command_name)
+                        print(f"✅ Comando {command_name} ejecutado con éxito")
+                    except Exception as e:
+                        print(f"❌ Error ejecutando {command_name}: {str(e)}")
+                        print("Detalles del error:")
+                        traceback.print_exc()
+        
         except Exception as e:
-            print(f"Error ejecutando utilidades para {app}: {e}")
+            print(f"Error al procesar app {app}: {str(e)}")
+            traceback.print_exc()
+
+def ejecutar_comandos_crear():
+    """Busca y ejecuta todos los comandos de management que empiezan con 'crear_' o 'Crear_'."""
+    print("\n=== EJECUTANDO COMANDOS DE CREACIÓN ===")
+    
+    # Primero ejecutar Crear_Menu específicamente
+    try:
+        print("Ejecutando comando: Crear_Menu")
+        call_command('Crear_Menu')
+        print("✅ Comando Crear_Menu ejecutado con éxito")
+    except Exception as e:
+        print(f"❌ Error ejecutando Crear_Menu: {str(e)}")
+        print("Detalles del error:")
+        traceback.print_exc()
+    
+    # Luego buscar y ejecutar otros comandos de creación
+    print("\nBuscando otros comandos crear_* o Crear_* en todas las aplicaciones...")
+    
+    for app in settings.INSTALLED_APPS:
+        if app.startswith('django.') or app.startswith('rest_framework'):
+            continue
+
+        try:
+            # Determinar el nombre correcto de la aplicación
+            app_name = app.split('.')[-1]
+            
+            # Construir el path del módulo de comandos
+            try:
+                module = import_module(f'{app}.management')
+                commands_path = Path(module.__file__).parent / 'commands'
+                if not commands_path.exists():
+                    continue
+            except (ModuleNotFoundError, AttributeError):
+                continue
+
+            # Buscar comandos de creación (crear_* o Crear_*)
+            for command_file in commands_path.glob('*.py'):
+                command_name = command_file.stem
+                
+                # Solo ejecutar comandos que empiecen con 'crear_' o 'Crear_' y no sean 'Crear_Menu'
+                if ((command_name.startswith('crear_') or command_name.startswith('Crear_')) and 
+                    command_name != '__init__' and 
+                    command_name != 'Crear_Menu'):
+                    
+                    try:
+                        print(f"Ejecutando comando: {command_name} de la app {app_name}")
+                        call_command(command_name)
+                        print(f"✅ Comando {command_name} ejecutado con éxito")
+                    except Exception as e:
+                        print(f"❌ Error ejecutando {command_name}: {str(e)}")
+                        print("Detalles del error:")
+                        traceback.print_exc()
+        
+        except Exception as e:
+            print(f"Error al procesar app {app}: {str(e)}")
+            traceback.print_exc()
 
 def mostrar_ayuda():
     """Muestra la ayuda del script."""
@@ -155,9 +222,9 @@ def mostrar_ayuda():
     Opciones:
         --help          Muestra esta ayuda
         --reset         Elimina migraciones y reinicia la base de datos
-        --load          Carga datos iniciales (load_initials, load_puc, Crear_Menu)
-        --utils         Ejecuta las funciones de utils de cada aplicación
-        --all           Ejecuta todo el proceso (reset + load + utils)
+        --load          Ejecuta todos los comandos load_* de todas las apps
+        --create        Ejecuta todos los comandos crear_* o Crear_* de todas las apps
+        --all           Ejecuta todo el proceso (reset + load + create)
         
     Si no se especifica ninguna opción, se ejecutará --all por defecto.
     """)
@@ -169,11 +236,11 @@ if __name__ == "__main__":
     if not args or '--all' in args:
         do_reset = True
         do_load = True
-        do_utils = True
+        do_create = True
     else:
         do_reset = '--reset' in args
         do_load = '--load' in args
-        do_utils = '--utils' in args
+        do_create = '--create' in args
         
         if '--help' in args:
             mostrar_ayuda()
@@ -185,9 +252,9 @@ if __name__ == "__main__":
         reiniciar_base_de_datos()
         
     if do_load:
-        cargar_datos_iniciales()
+        ejecutar_comandos_load()
         
-    if do_utils:
-        ejecutar_utils()
+    if do_create:
+        ejecutar_comandos_crear()
         
     print("\n¡Proceso completado exitosamente!")

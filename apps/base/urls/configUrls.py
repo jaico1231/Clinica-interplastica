@@ -45,6 +45,7 @@ urlpatterns = [
     path('menuitems/<int:pk>/edit/', login_required(MenuItemUpdateView.as_view()), name='menuitem_edit'),
 
     path('company/int:pk',login_required(add_menu_name('EMPRESA','location_city')(CompanyUpdateView.as_view())), name='company_update'),
+    path('company/areas/', login_required(add_menu_name('AREAS','location_city')(.as_view())), name='company_create'),
     path('toggle-status/<str:app_name>/<str:model_name>/<int:pk>/', GenericToggleActiveStatusView.as_view(), name='toggle_active_status'),
     
 

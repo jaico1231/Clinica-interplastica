@@ -1,0 +1,379 @@
+{% extends 'index.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block stylesheets %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/select2.min.css' %}">
+<style>
+    .required-field::after {
+        content: " *";
+        color: red;
+    }
+    
+    .file-preview {
+        margin-top: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .file-item {
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 5px 10px;
+        display: flex;
+        align-items: center;
+        background-color: #f8f9fa;
+    }
+    
+    .file-item .file-name {
+        margin-left: 5px;
+    }
+    
+    .file-item .remove-file {
+        margin-left: 10px;
+        cursor: pointer;
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h4>{{ title }}</h4>
+        <div>
+            <a href="{% url 'control residuos:waste_record_list' %}" class="btn btn-light">
+                <i class="bi bi-arrow-left"></i> {% trans 'Volver' %}
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data" id="waste-record-form" novalidate>
+            {% csrf_token %}
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>{% trans 'Información Básica' %}</h5>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.record_date_hidden.id_for_label }}">{{ form.record_date_hidden.label }}</label>
+                        {{ form.record_date_hidden }}
+                        {% if form.record_date_hidden.errors %}
+                            <div class="invalid-feedback d-block">{{ form.record_date_hidden.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group mt-2">
+                        <label for="{{ form.area.id_for_label }}">{{ form.area.label }}</label>
+                        {{ form.area }}
+                        {% if form.area.errors %}
+                            <div class="invalid-feedback d-block">{{ form.area.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group mt-2">
+                        <label for="{{ form.waste_type.id_for_label }}">{{ form.waste_type.label }}</label>
+                        {{ form.waste_type }}
+                        {% if form.waste_type.errors %}
+                            <div class="invalid-feedback d-block">{{ form.waste_type.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group mt-2">
+                        <label for="{{ form.quantity.id_for_label }}">{{ form.quantity.label }}</label>
+                        {{ form.quantity }}
+                        {% if form.quantity.errors %}
+                            <div class="invalid-feedback d-block">{{ form.quantity.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group mt-2">
+                        <label for="{{ form.unit.id_for_label }}">{{ form.unit.label }}</label>
+                        {{ form.unit }}
+                        {% if form.unit.errors %}
+                            <div class="invalid-feedback d-block">{{ form.unit.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <h5>{% trans 'Información Adicional' %}</h5>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.container_type.id_for_label }}">{{ form.container_type.label }}</label>
+                        {{ form.container_type }}
+                        {% if form.container_type.errors %}
+                            <div class="invalid-feedback d-block">{{ form.container_type.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group mt-2">
+                        <label for="{{ form.responsible.id_for_label }}">{{ form.responsible.label }}</label>
+                        {{ form.responsible }}
+                        {% if form.responsible.errors %}
+                            <div class="invalid-feedback d-block">{{ form.responsible.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group mt-2">
+                        <label for="{{ form.storage_location.id_for_label }}">{{ form.storage_location.label }}</label>
+                        {{ form.storage_location }}
+                        {% if form.storage_location.errors %}
+                            <div class="invalid-feedback d-block">{{ form.storage_location.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group mt-2">
+                        <label for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
+                        {{ form.notes }}
+                        {% if form.notes.errors %}
+                            <div class="invalid-feedback d-block">{{ form.notes.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <h5>{% trans 'Archivos Adjuntos' %}</h5>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.media_files.id_for_label }}">{{ form.media_files.label }}</label>
+                        {{ form.media_files }}
+                        {% if form.media_files.errors %}
+                            <div class="invalid-feedback d-block">{{ form.media_files.errors }}</div>
+                        {% endif %}
+                        <div class="form-text text-muted">
+                            {% trans "Formatos permitidos" %}: {{ allowed_extensions|join:", "|default:"jpg, jpeg, png, pdf, doc, docx, xls, xlsx" }}. 
+                            {% trans "Tamaño máximo" %}: {{ max_upload_size_mb|default:"5" }}MB
+                        </div>
+                        
+                        <div id="file-preview" class="file-preview mt-2"></div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if object and object.wastemediafile_set.exists %}
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <h5>{% trans "Archivos Existentes" %}</h5>
+                    <div class="existing-files d-flex flex-wrap gap-2">
+                        {% for media_file in object.wastemediafile_set.all %}
+                        <div class="file-item" id="existing-file-{{ media_file.id }}">
+                            {% if media_file.file_type == 'pdf' %}
+                            <i class="bi bi-file-pdf"></i>
+                            {% elif media_file.file_type == 'jpg' or media_file.file_type == 'jpeg' or media_file.file_type == 'png' %}
+                            <i class="bi bi-file-image"></i>
+                            {% else %}
+                            <i class="bi bi-file-earmark"></i>
+                            {% endif %}
+                            <span class="file-name">{{ media_file.filename }}</span>
+                            <a href="{{ media_file.file.url }}" target="_blank" class="ms-2">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <span class="remove-file" data-file-id="{{ media_file.id }}">
+                                <i class="bi bi-x-circle"></i>
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="mt-4 d-flex justify-content-between">
+                <div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-1"></i>
+                        {% if object %}
+                            {% trans 'Actualizar Registro' %}
+                        {% else %}
+                            {% trans 'Guardar Registro' %}
+                        {% endif %}
+                    </button>
+                    <a href="{% url 'control residuos:waste_record_list' %}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle me-1"></i>{% trans 'Cancelar' %}
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ block.super }}
+<script src="{% static 'js/select2.min.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar Select2
+        $('.select2').select2({
+            width: '100%',
+            language: 'es'
+        });
+        
+        // Previsualización de archivos
+        const fileInput = document.getElementById('{{ form.media_files.id_for_label }}');
+        const filePreview = document.getElementById('file-preview');
+        
+        if (fileInput) {
+            fileInput.addEventListener('change', function() {
+                // Limpiar previsualización anterior
+                filePreview.innerHTML = '';
+                
+                // Agregar archivos a la previsualización
+                for (const file of this.files) {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    
+                    // Establecer ícono según tipo de archivo
+                    let fileIcon = '';
+                    const fileType = file.name.split('.').pop().toLowerCase();
+                    
+                    if (fileType === 'pdf') {
+                        fileIcon = '<i class="bi bi-file-pdf"></i>';
+                    } else if (['jpg', 'jpeg', 'png', 'gif'].includes(fileType)) {
+                        fileIcon = '<i class="bi bi-file-image"></i>';
+                    } else {
+                        fileIcon = '<i class="bi bi-file-earmark"></i>';
+                    }
+                    
+                    // Agregar nombre e ícono a la previsualización
+                    fileItem.innerHTML = `
+                        ${fileIcon}
+                        <span class="file-name">${file.name}</span>
+                        <span class="remove-file" data-file-name="${file.name}">
+                            <i class="bi bi-x-circle"></i>
+                        </span>
+                    `;
+                    
+                    filePreview.appendChild(fileItem);
+                }
+                
+                // Configurar eventos para eliminar archivos
+                const removeButtons = document.querySelectorAll('.remove-file[data-file-name]');
+                removeButtons.forEach(button => {
+                    button.addEventListener('click', function() {
+                        const fileName = this.getAttribute('data-file-name');
+                        
+                        // Crear un nuevo FileList sin el archivo eliminado
+                        const dt = new DataTransfer();
+                        for (const file of fileInput.files) {
+                            if (file.name !== fileName) {
+                                dt.items.add(file);
+                            }
+                        }
+                        
+                        // Actualizar input de archivos
+                        fileInput.files = dt.files;
+                        
+                        // Eliminar elemento visual
+                        this.closest('.file-item').remove();
+                    });
+                });
+            });
+        }
+        
+        // Eliminar archivos existentes (si aplica)
+        const removeExistingButtons = document.querySelectorAll('.remove-file[data-file-id]');
+        removeExistingButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const fileId = this.getAttribute('data-file-id');
+                const fileItem = document.getElementById(`existing-file-${fileId}`);
+                
+                // Confirmar eliminación
+                if (window.confirm('{% trans "¿Está seguro de eliminar este archivo?" %}')) {
+                    // Eliminar archivo mediante AJAX
+                    fetch(`{% url 'control residuos:waste_record_delete' %}?file_id=${fileId}`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}',
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Eliminar elemento visual
+                            fileItem.remove();
+                            
+                            // Mostrar mensaje de éxito
+                            alert(data.message || '{% trans "Archivo eliminado con éxito" %}');
+                        } else {
+                            // Mostrar mensaje de error
+                            alert(data.message || '{% trans "Error al eliminar el archivo" %}');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('{% trans "Error al eliminar el archivo" %}');
+                    });
+                }
+            });
+        });
+
+        // Validación del formulario
+        const form = document.getElementById('waste-record-form');
+        if (form) {
+            form.addEventListener('submit', function(event) {
+                // Validar campos requeridos
+                const requiredFields = form.querySelectorAll('[required]');
+                let hasErrors = false;
+                
+                requiredFields.forEach(field => {
+                    if (!field.value.trim()) {
+                        field.classList.add('is-invalid');
+                        
+                        // Crear mensaje de error si no existe
+                        let errorDiv = field.parentNode.querySelector('.invalid-feedback');
+                        if (!errorDiv) {
+                            errorDiv = document.createElement('div');
+                            errorDiv.className = 'invalid-feedback d-block';
+                            errorDiv.textContent = '{% trans "Este campo es obligatorio" %}';
+                            field.parentNode.appendChild(errorDiv);
+                        }
+                        
+                        hasErrors = true;
+                    } else {
+                        field.classList.remove('is-invalid');
+                        field.classList.add('is-valid');
+                        
+                        // Eliminar mensaje de error si existe
+                        const errorDiv = field.parentNode.querySelector('.invalid-feedback');
+                        if (errorDiv) {
+                            errorDiv.remove();
+                        }
+                    }
+                });
+                
+                // Validar cantidad positiva
+                const quantityField = document.getElementById('{{ form.quantity.id_for_label }}');
+                if (quantityField && quantityField.value && parseFloat(quantityField.value) <= 0) {
+                    quantityField.classList.add('is-invalid');
+                    
+                    // Crear mensaje de error si no existe
+                    let errorDiv = quantityField.parentNode.querySelector('.invalid-feedback');
+                    if (!errorDiv) {
+                        errorDiv = document.createElement('div');
+                        errorDiv.className = 'invalid-feedback d-block';
+                        errorDiv.textContent = '{% trans "La cantidad debe ser mayor que cero" %}';
+                        quantityField.parentNode.appendChild(errorDiv);
+                    }
+                    
+                    hasErrors = true;
+                }
+                
+                // Prevenir envío si hay errores
+                if (hasErrors) {
+                    event.preventDefault();
+                    alert('{% trans "Por favor, corrija los errores del formulario" %}');
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

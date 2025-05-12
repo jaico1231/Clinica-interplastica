@@ -5,7 +5,8 @@ from apps.base.models.support import (
     AccountType, City, ComercialCompanyType, Country, DocType, 
     FiscalResponsibility, Periodicity, State, TaxRegime
 )
-from apps.base.models.basemodel import BaseModel, SoftDeleteModel
+from apps.base.models.basemodel import BaseModel, CompleteModel, SoftDeleteModel
+from apps.base.models.users import User
 
 
 def company_logo_path(instance, filename):
@@ -300,3 +301,37 @@ class CompanyAccountingConfig(BaseModel):
     def __str__(self):
         # Corregido _str_ a __str__
         return f"Configuración contable de {self.company.name}"
+    
+class CompanyArea(CompleteModel):
+    """
+    Modelo para las áreas de la empresa
+    """
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name='areas'
+    )
+    name = models.CharField(
+        'Nombre del Área',
+        max_length=100
+    )
+    description = models.TextField(
+        'Descripción del Área',
+        null=True,
+        blank=True
+    )
+    default_manager = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='default_manager_areas'
+    )
+    
+    class Meta:
+        verbose_name = 'Área de la Empresa'
+        verbose_name_plural = 'Áreas de la Empresa'
+        unique_together = ('company', 'name')
+    
+    def __str__(self):
+        return f"{self.company.name} - {self.name}"
