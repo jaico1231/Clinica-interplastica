@@ -84,7 +84,7 @@ class IndicatorFilterForm(forms.Form):
         queryset=Period.objects.filter(is_active=True).order_by('-start_date'),
         required=False,
         empty_label="All Periods",
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'form-select select2', 'data-placeholder': 'Select a period'})
     )
     
     category = forms.CharField(

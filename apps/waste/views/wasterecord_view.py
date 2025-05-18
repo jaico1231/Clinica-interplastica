@@ -330,6 +330,7 @@ class WasteRecordDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteV
             messages.error(request, error_message)
             return redirect(self.success_url)
 
+
 class WasteRecordExportView(GenericExportView):
     model = WasteRecord
     permission_required = 'waste.view_wasterecord'

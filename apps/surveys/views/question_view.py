@@ -120,7 +120,7 @@ class QuestionCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView
         
         # Obtener el máximo orden y añadir 10 para la nueva pregunta
         max_order = Question.objects.filter(survey=self.survey).aggregate(Max('order'))['order__max'] or 0
-        initial['order'] = max_order + 10
+        initial['order'] = max_order + 1
         
         return initial
     

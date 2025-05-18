@@ -2,11 +2,12 @@
 {% load i18n %}
 {% load static %}
 {% load custom_filters %}
-{% block page_title %}{{ survey.title }} - {% trans "Survey Detail" %}{% endblock %}
+{% block page_title %}{{ survey.title }} - {% trans "Detalle de la Encuesta" %}{% endblock %}
 
 {% block header %}{{ survey.title }}{% endblock %}
 {% block extra_css %}
-
+<!-- Add additional CSS for hierarchy questions -->
+<link rel="stylesheet" href="{% static 'assets/css/sortable-list.css' %}">
 {% endblock %}
 {% block page_content %}
 <!-- Cabecera con Detalles del Cuestionario -->
@@ -14,25 +15,25 @@
     <div class="col-md-8">
         <p class="text-muted">
             {% if survey.is_published %}
-            <span class="badge bg-success">{% trans "Published" %}</span>
+            <span class="badge bg-success">{% trans "Publicado" %}</span>
             {% else %}
-            <span class="badge bg-secondary">{% trans "Draft" %}</span>
+            <span class="badge bg-secondary">{% trans "Borrador" %}</span>
             {% endif %}
             {% if survey.start_date and survey.end_date %}
-            <span class="ms-2">{% trans "Active period:" %} {{ survey.start_date|date:"d M, Y" }} - {{ survey.end_date|date:"d M, Y" }}</span>
+            <span class="ms-2">{% trans "Período activo:" %} {{ survey.start_date|date:"d M, Y" }} - {{ survey.end_date|date:"d M, Y" }}</span>
             {% endif %}
         </p>
         <div class="mb-3">{{ survey.description|linebreaks }}</div>
     </div>
     <div class="col-md-4 text-md-end d-flex flex-column justify-content-between">
         <div>
-            <h4>{% trans "Survey Statistics" %}</h4>
-            <p><strong>{% trans "Questions:" %}</strong> {{ survey.question_count }}</p>
-            <p><strong>{% trans "Responses:" %}</strong> {{ response_count }}</p>
+            <h4>{% trans "Estadísticas de la Encuesta" %}</h4>
+            <p><strong>{% trans "Preguntas:" %}</strong> {{ survey.question_count }}</p>
+            <p><strong>{% trans "Respuestas:" %}</strong> {{ response_count }}</p>
         </div>
         <!-- Example split danger button -->
         <div class="btn-group">
-            <button type="button" class="btn btn-primary EditSurveyBtn"><i class="bi bi-pencil-square"></i> {% trans "Edit" %}</button>
+            <button type="button" class="btn btn-primary EditSurveyBtn"><i class="bi bi-pencil-square"></i> {% trans "Editar" %}</button>
             <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
             <span class="visually-hidden">Toggle Dropdown</span>
             </button>
@@ -46,13 +47,13 @@
             {% else %}
             <li>
                 <button type="button" class="dropdown-item UnpublishBtn">
-                    <i class="bi bi-check2-circle"></i> {% trans "Despublica Encuesta" %}
+                    <i class="bi bi-check2-circle"></i> {% trans "Despublicar Encuesta" %}
                 </button>
             </li>
             {% endif %}
             <li>
                 <button type="button" class="dropdown-item PreviewBtn">
-                    <i class="bi bi-eye"></i> {% trans "Encuesta Previa" %}
+                    <i class="bi bi-eye"></i> {% trans "Vista Previa" %}
                 </button>
             </li>
             <li>
@@ -69,7 +70,7 @@
             <li><hr class="dropdown-divider"></li>
             <li>
                 <button type="button" class="dropdown-item DelBtn">
-                    <i class="bi bi-trash"></i> {% trans "Eliminar encuesta" %}
+                    <i class="bi bi-trash"></i> {% trans "Eliminar Encuesta" %}
                 </button>
             </li>
             </ul>
@@ -82,10 +83,13 @@
 <!-- Sección de Preguntas -->
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h2 class="h4 mb-0">{% trans "Survey Questions" %}</h2>
-        <button type="button" class="btn btn-sm btn-success AddQuestionBtn" >
-            <i class="bi bi-plus-circle"></i> {% trans "Add Question" %}
-        </button>
+        <h2 class="h4 mb-0">{% trans "Preguntas de la Encuesta" %}</h2>
+        <div>
+            <button type="button" class="btn btn-sm btn-success AddQuestionBtn" >
+                <i class="bi bi-plus-circle"></i> {% trans "Añadir Pregunta" %}
+            </button>
+            
+        </div>
     </div>
     <div class="card-body">
         {% if questions %}
@@ -94,35 +98,60 @@
                     <thead>
                         <tr>
                             <th width="5%">#</th>
-                            <th width="40%">{% trans "Question" %}</th>
-                            <th width="15%">{% trans "Type" %}</th>
-                            <th width="10%">{% trans "Required" %}</th>
-                            <th width="15%">{% trans "Options" %}</th>
-                            <th width="15%" class="text-end">{% trans "Actions" %}</th>
+                            <th width="40%">{% trans "Pregunta" %}</th>
+                            <th width="15%">{% trans "Tipo" %}</th>
+                            <th width="10%">{% trans "Obligatorio" %}</th>
+                            <th width="15%">{% trans "Opciones" %}</th>
+                            <th width="15%" class="text-end">{% trans "Acciones" %}</th>
                         </tr>
                     </thead>
                     <tbody id="questions-list" class="sortable">
                         {% for question in questions %}
                         <tr id="question-{{ question.id }}" data-id="{{ question.id }}">
-                            <td>{{ question.order }}</td>
+                            <td class="handle"><i class="bi bi-grip-vertical text-muted"></i> {{ question.order }}</td>
                             <td>
                                 <strong>{{ question.text }}</strong>
                                 {% if question.help_text %}
                                     <p class="text-muted small mb-0">{{ question.help_text }}</p>
                                 {% endif %}
                             </td>
-                            <td>{{ question.question_type.name }}</td>
+                            <td>
+                                
+                                {% if question.question_type.name == 'HIERARCHY' %}
+                                <span class="badge bg-info ms-1">{% trans "ORDENAMIENTO" %}</span>
+                                {% elif question.question_type.name == 'YES_NO' %}
+                                <span class="badge bg-info ms-1">{% trans "SI / NO" %}</span>
+                                {% elif question.question_type.name == 'SINGLE_CHOICE' %}
+                                <span class="badge bg-info ms-1">{% trans "UNICA OPCION" %}</span>
+                                {% elif question.question_type.name == 'MULTIPLE_CHOICE' %}
+                                <span class="badge bg-info ms-1">{% trans "MULTIPLE OPCION" %}</span>
+                                {% elif question.question_type.name == 'RATING' %}
+                                <span class="badge bg-info ms-1">{% trans "CALIFICACION" %}</span>
+                                {% elif question.question_type.name == 'TEXT' %}
+                                <span class="badge bg-info ms-1">{% trans "TEXTO" %}</span>
+                                {% elif question.question_type.name == 'NUMBER' %}
+                                <span class="badge bg-info ms-1">{% trans "NUMERICO" %}</span>
+                                {% elif question.question_type.name == 'DATE' %}
+                                <span class="badge bg-info ms-1">{% trans "FECHA" %}</span>
+                                {% elif question.question_type.name == 'TEXT_AREA' %}
+                                <span class="badge bg-info ms-1">{% trans "TEXTO AMPLIO" %}</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 {% if question.is_required %}
-                                <span class="badge bg-info">{% trans "Required" %}</span>
+                                <span class="badge bg-info">{% trans "Obligatorio" %}</span>
                                 {% else %}
-                                <span class="badge bg-light text-dark">{% trans "Optional" %}</span>
+                                <span class="badge bg-light text-dark">{% trans "Opcional" %}</span>
                                 {% endif %}
                             </td>
                             <td>
                                 {% if question.has_choices %}
                                     <button type="button" class="btn btn-sm btn-outline-info ViewChoicesBtn" data-question-id="{{ question.id }}">
-                                        <i class="bi bi-list-ul me-1"></i> {{ question.choices.count }} {% trans "options" %}
+                                        <i class="bi bi-list-ul me-1"></i> {{ question.choices.count }} {% trans "opciones" %}
+                                    </button>
+                                {% elif question.question_type.name == 'HIERARCHY' %}
+                                    <button type="button" class="btn btn-sm btn-outline-info ViewHierarchyItemsBtn" data-question-id="{{ question.id }}">
+                                        <i class="bi bi-diagram-3 me-1"></i> {{ question.hierarchy_items.count }} {% trans "elementos" %}
                                     </button>
                                 {% else %}
                                     <span class="text-muted">-</span>
@@ -153,15 +182,17 @@
                 <div class="mb-3">
                     <i class="bi bi-card-checklist text-muted" style="font-size: 3rem;"></i>
                 </div>
-                <h3>{% trans "No questions added yet" %}</h3>
-                <p class="text-muted">{% trans "Start building your survey by adding questions." %}</p>
+                <h3>{% trans "No hay preguntas añadidas todavía" %}</h3>
+                <p class="text-muted">{% trans "Comienza a construir tu encuesta añadiendo preguntas." %}</p>
                 <button type="button" class="btn btn-primary mt-2 FirstQuestionBtn">
-                    <i class="bi bi-plus-circle"></i> {% trans "Add Your First Question" %}
+                    <i class="bi bi-plus-circle"></i> {% trans "Añadir Tu Primera Pregunta" %}
                 </button>
             </div>
         {% endif %}
     </div>
 </div>
+
+
 <!-- Fin Sección de Preguntas -->
 {% endblock %}
 {% block extra_js %}
@@ -176,24 +207,12 @@
         export: "{% url 'encuestas:survey_pdf_export' survey.id %}?format=pdf",
         delete: "{% url 'encuestas:survey_delete' survey.id %}",
         addQuestion: "{% url 'encuestas:question_create' survey.id %}",
-
-
-        //////////////////////////////////////////////////////////////////
-        edit: "{% url 'encuestas:survey_update' survey.id %}",
-        publish: "{% url 'encuestas:survey_publish' survey.id %}",
-        unpublish: "{% url 'encuestas:survey_unpublish' survey.id %}",
-        preview: "{% url 'encuestas:survey_preview' survey.id %}",
-        responses: "{% url 'encuestas:survey_responses' survey.id %}",
-        export: "{% url 'encuestas:survey_pdf_export' survey.id %}?format=pdf",
-        delete: "{% url 'encuestas:survey_delete' survey.id %}",
-        addQuestion: "{% url 'encuestas:question_create' survey.id %}",
         getHierarchyItems: "/api/questions/{questionId}/hierarchy-items/",
-        addHierarchyItem: "/api/questions/{questionId}/hierarchy-items/create/",
         updateHierarchyItem: "/api/hierarchy-items/{itemId}/update/",
         deleteHierarchyItem: "/api/hierarchy-items/{itemId}/delete/",
         reorderHierarchyItems: "/api/questions/{questionId}/hierarchy-items/reorder/",
-        //////////////////////////////////////////////////////////////////
     };
 </script>
 <script src="{% static 'assets/js/surveys/survey_detail.js' %}"></script>
+<script src="{% static 'assets/js/surveys/hierarchy_management.js' %}"></script>
 {% endblock %}

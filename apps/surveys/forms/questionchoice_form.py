@@ -2,9 +2,8 @@ from django import forms
 from django.utils.translation import gettext as _
 from django.forms import modelformset_factory, inlineformset_factory
 from django.core.exceptions import ValidationError
-
+from django.db.models import Q
 from apps.surveys.models.surveymodel import Question, QuestionChoice, QuestionType, Survey
-
 
 class QuestionChoiceForm(forms.ModelForm):
     """
@@ -40,7 +39,11 @@ class QuestionChoiceForm(forms.ModelForm):
         
         # Set initial value for question field if question_id is provided
         if self.question_id:
-            self.fields['question'].initial = self.question_id
+            try:
+                question = Question.objects.get(pk=self.question_id)
+                self.fields['question'].initial = question
+            except Question.DoesNotExist:
+                pass
         
         # Add help text for is_other_option field
         self.fields['is_other_option'].help_text = _(
@@ -57,12 +60,15 @@ class QuestionChoiceForm(forms.ModelForm):
         if is_other and question:
             # If we're editing, exclude the current instance
             instance_id = getattr(self.instance, 'id', None)
-            filter_kwargs = {'question': question, 'is_other_option': True, 'is_active': True}
             
+            # Build query to check for existing "other" options
+            query = Q(question=question, is_other_option=True, is_active=True)
+            
+            # Exclude current instance if editing
             if instance_id:
-                filter_kwargs['id__ne'] = instance_id
+                query &= ~Q(id=instance_id)
                 
-            existing_other = QuestionChoice.objects.filter(**filter_kwargs).exists()
+            existing_other = QuestionChoice.objects.filter(query).exists()
             
             if existing_other:
                 self.add_error('is_other_option', _(
@@ -70,6 +76,70 @@ class QuestionChoiceForm(forms.ModelForm):
                 ))
         
         return cleaned_data
+# class QuestionChoiceForm(forms.ModelForm):
+#     """
+#     Formulario para la creación y edición de opciones de respuesta
+#     """
+#     class Meta:
+#         model = QuestionChoice
+#         fields = [
+#             'question', 'text', 'value', 'order', 
+#             'color', 'is_other_option'
+#         ]
+#         labels = {
+#             'question': _('Pregunta'),
+#             'text': _('Texto de la opción'),
+#             'value': _('Valor'),
+#             'order': _('Orden'),
+#             'color': _('Color (opcional)'),
+#             'is_other_option': _('¿Es opción "Otro"?')
+#         }
+#         widgets = {
+#             'question': forms.HiddenInput(),
+#             'text': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('Texto de la opción')}),
+#             'value': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('Valor (se generará automáticamente si está vacío)')}),
+#             'order': forms.NumberInput(attrs={'class': 'form-control'}),
+#             'color': forms.TextInput(attrs={'class': 'form-control color-picker', 'placeholder': _('Color (ej: #FF5733)')}),
+#             'is_other_option': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+#         }
+    
+#     def __init__(self, *args, **kwargs):
+#         # Extract question_id before calling super
+#         self.question_id = kwargs.pop('question_id', None)
+#         super().__init__(*args, **kwargs)
+        
+#         # Set initial value for question field if question_id is provided
+#         if self.question_id:
+#             self.fields['question'].initial = self.question_id
+        
+#         # Add help text for is_other_option field
+#         self.fields['is_other_option'].help_text = _(
+#             "Si está marcada, esta opción permitirá al usuario ingresar texto adicional"
+#         )
+    
+#     def clean(self):
+#         cleaned_data = super().clean()
+        
+#         # Validate that there's not more than one "Other" option per question
+#         is_other = cleaned_data.get('is_other_option')
+#         question = cleaned_data.get('question')
+        
+#         if is_other and question:
+#             # If we're editing, exclude the current instance
+#             instance_id = getattr(self.instance, 'id', None)
+#             filter_kwargs = {'question': question, 'is_other_option': True, 'is_active': True}
+            
+#             if instance_id:
+#                 filter_kwargs['id__ne'] = instance_id
+                
+#             existing_other = QuestionChoice.objects.filter(**filter_kwargs).exists()
+            
+#             if existing_other:
+#                 self.add_error('is_other_option', _(
+#                     'Ya existe una opción "Otro" para esta pregunta'
+#                 ))
+        
+#         return cleaned_data
 
 
 class BaseQuestionFormSet(forms.BaseModelFormSet):

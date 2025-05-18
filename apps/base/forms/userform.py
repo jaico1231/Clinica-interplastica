@@ -34,7 +34,7 @@ class UserForm(forms.ModelForm):
             'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('Nombres')}),
             'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('Apellidos')}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': _('Correo electrónico')}),
-            'identification_type': forms.Select(attrs={'class': 'form-select'}),
+            'identification_type': forms.Select(attrs={'class': 'form-select select2'}),
             'identification_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('Número de identificación')}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_staff': forms.CheckboxInput(attrs={'class': 'form-check-input'}),

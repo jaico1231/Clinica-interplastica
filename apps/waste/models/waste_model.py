@@ -4,6 +4,7 @@ from django.core.validators import MinValueValidator
 
 from apps.base.models.basemodel import BaseModel
 from apps.base.models.company import CompanyArea
+from apps.third_party.models.third_party import ThirdParty
 
 
 class WasteManager(BaseModel):
@@ -106,11 +107,11 @@ class WasteRecord(BaseModel):
     """Daily record of waste generation"""
     """registro diario de residuos"""
     UNITS = [
-        ('KG', 'Kilograms'),
-        ('TON', 'Tons'),
-        ('M3', 'Cubic meters'),
-        ('L', 'Liters'),
-        ('UN', 'Units'),
+        ('KG', 'Kilogramos'),
+        ('TON', 'Toneladas'),
+        ('M3', 'Metros Cubicos'),
+        ('L', 'Litros'),
+        ('UN', 'Unidad'),
     ]
     
     record_date = models.DateField(default=timezone.now)  # Cambiado de auto_now_add para permitir edición
@@ -119,7 +120,7 @@ class WasteRecord(BaseModel):
     quantity = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0.01)])
     unit = models.CharField(max_length=5, choices=UNITS, default='KG')
     container_type = models.CharField(max_length=100, blank=True, null=True)  # Tipo de contenedor
-    responsible = models.CharField(max_length=200, blank=True, null=True)  # Responsable del registro
+    responsible = models.ForeignKey(ThirdParty, on_delete=models.SET_NULL, null=True, blank=True)
     storage_location = models.CharField(max_length=200, blank=True, null=True)  # Ubicación de almacenamiento
     notes = models.TextField(blank=True, null=True)
     

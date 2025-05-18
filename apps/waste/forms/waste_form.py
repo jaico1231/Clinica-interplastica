@@ -131,12 +131,12 @@ class WasteRecordForm(forms.ModelForm):
             'notes'
         ]
         widgets = {
-            'area': forms.Select(attrs={'class': 'form-control select2'}),
-            'waste_type': forms.Select(attrs={'class': 'form-control select2'}),
+            'area': forms.Select(attrs={'class': 'form-select select2'}),
+            'waste_type': forms.Select(attrs={'class': 'form-select select2'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '0.01', 'step': '0.01'}),
             'unit': forms.Select(attrs={'class': 'form-control'}),
             'container_type': forms.TextInput(attrs={'class': 'form-control'}),
-            'responsible': forms.TextInput(attrs={'class': 'form-control'}),
+            'responsible': forms.Select(attrs={'class':'form-select select2'}),
             'storage_location': forms.TextInput(attrs={'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
@@ -183,7 +183,7 @@ class WasteRecordForm(forms.ModelForm):
             if field.required:
                 field.widget.attrs['required'] = 'required'
                 if field.label:
-                    field.label = f"{field.label} *"
+                    field.label = f"{field.label}"
                     
         # Establecer fecha máxima como hoy
         self.fields['record_date_hidden'].widget.attrs['max'] = timezone.now().strftime('%Y-%m-%d')

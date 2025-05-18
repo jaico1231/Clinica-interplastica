@@ -301,7 +301,8 @@ class CompanyAccountingConfig(BaseModel):
     def __str__(self):
         # Corregido _str_ a __str__
         return f"Configuración contable de {self.company.name}"
-    
+
+
 class CompanyArea(CompleteModel):
     """
     Modelo para las áreas de la empresa

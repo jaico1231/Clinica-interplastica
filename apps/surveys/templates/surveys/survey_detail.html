@@ -32,48 +32,50 @@
             <p><strong>{% trans "Respuestas:" %}</strong> {{ response_count }}</p>
         </div>
         <!-- Example split danger button -->
-        <div class="btn-group">
-            <button type="button" class="btn btn-primary EditSurveyBtn"><i class="bi bi-pencil-square"></i> {% trans "Editar" %}</button>
-            <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
-            <span class="visually-hidden">Toggle Dropdown</span>
-            </button>
-            <ul class="dropdown-menu">
-            {% if not survey.is_published %}
-            <li>
-                <button type="button" class="dropdown-item PublishBtn">
-                    <i class="bi bi-check2-circle"></i> {% trans "Publicar Encuesta" %}
+        <div class="col-md-4 text-end" >
+            <!-- Menú desplegable corregido -->
+            <div class="btn-group" >
+                <button type="button" class="btn btn-primary EditSurveyBtn"><i class="bi bi-pencil-square"></i> {% trans "Editar" %}</button>
+                <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="visually-hidden">Toggle Dropdown</span>
                 </button>
-            </li>
-            {% else %}
-            <li>
-                <button type="button" class="dropdown-item UnpublishBtn">
-                    <i class="bi bi-check2-circle"></i> {% trans "Despublicar Encuesta" %}
-                </button>
-            </li>
-            {% endif %}
-            <li>
-                <button type="button" class="dropdown-item PreviewBtn">
-                    <i class="bi bi-eye"></i> {% trans "Vista Previa" %}
-                </button>
-            </li>
-            <li>
-                <button type="button" class="dropdown-item ResponsesBtn">
-                    <i class="bi bi-list-ul"></i> {% trans "Ver Respuestas" %}
-                </button>
-            </li>
-            <li>
-                <button type="button" class="dropdown-item ExportBtn">
-                    <i class="bi bi-download"></i> {% trans "Exportar Encuesta" %}
-                </button>
-                
-            </li>
-            <li><hr class="dropdown-divider"></li>
-            <li>
-                <button type="button" class="dropdown-item DelBtn">
-                    <i class="bi bi-trash"></i> {% trans "Eliminar Encuesta" %}
-                </button>
-            </li>
-            </ul>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    {% if not survey.is_published %}
+                    <li>
+                        <button type="button" class="dropdown-item PublishBtn">
+                            <i class="bi bi-check2-circle"></i> {% trans "Publicar Encuesta" %}
+                        </button>
+                    </li>
+                    {% else %}
+                    <li>
+                        <button type="button" class="dropdown-item UnpublishBtn">
+                            <i class="bi bi-check2-circle"></i> {% trans "Despublicar Encuesta" %}
+                        </button>
+                    </li>
+                    {% endif %}
+                    <li>
+                        <button type="button" class="dropdown-item PreviewBtn">
+                            <i class="bi bi-eye"></i> {% trans "Vista Previa" %}
+                        </button>
+                    </li>
+                    <li>
+                        <button type="button" class="dropdown-item ResponsesBtn">
+                            <i class="bi bi-list-ul"></i> {% trans "Ver Respuestas" %}
+                        </button>
+                    </li>
+                    <li>
+                        <button type="button" class="dropdown-item ExportBtn">
+                            <i class="bi bi-download"></i> {% trans "Exportar Encuesta" %}
+                        </button>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <button type="button" class="dropdown-item DelBtn">
+                            <i class="bi bi-trash"></i> {% trans "Eliminar Encuesta" %}
+                        </button>
+                    </li>
+                </ul>
+            </div>
         </div>
         
     </div>

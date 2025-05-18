@@ -1,0 +1,165 @@
+/* assets/css/sortable-list.css */
+
+/* Estilos para listas ordenables */
+.sortable tr,
+.sortable-list .list-group-item {
+    cursor: move;
+    transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
+}
+
+.sortable tr.sortable-ghost,
+.sortable-list .list-group-item.sortable-ghost {
+    background-color: #f8f9fa;
+    opacity: 0.8;
+}
+
+.sortable tr.sortable-chosen,
+.sortable-list .list-group-item.sortable-chosen {
+    background-color: #e9ecef;
+    transform: scale(1.01);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+}
+
+.sortable tr.sortable-drag,
+.sortable-list .list-group-item.sortable-drag {
+    opacity: 0.9;
+    transform: scale(1.02);
+    box-shadow: 0 8px 10px rgba(0, 0, 0, 0.15);
+}
+
+/* Estilos específicos para listas jerárquicas */
+.sortable-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.sortable-list .list-group-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+}
+
+.sortable-list .list-group-item .handle {
+    cursor: move;
+    color: #6c757d;
+    margin-right: 0.75rem;
+}
+
+.sortable-list .list-group-item .handle:hover {
+    color: #495057;
+}
+
+.sortable-list .list-group-item .item-content {
+    flex-grow: 1;
+}
+
+.sortable-list .list-group-item .item-title {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.sortable-list .list-group-item .item-description {
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+
+.sortable-list .list-group-item .item-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.sortable-list .list-group-item .item-actions .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* Animaciones para elementos de lista */
+.sortable-list .list-group-item {
+    animation-duration: 0.3s;
+    animation-fill-mode: both;
+}
+
+.sortable-list .list-group-item.adding {
+    animation-name: fadeInDown;
+}
+
+.sortable-list .list-group-item.removing {
+    animation-name: fadeOutUp;
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translate3d(0, -20px, 0);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+@keyframes fadeOutUp {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+        transform: translate3d(0, -20px, 0);
+    }
+}
+
+/* Estilo para el mensaje de ayuda cuando se arrastra */
+.sortable-list::before {
+    content: '';
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.7);
+    z-index: 5;
+    pointer-events: none;
+}
+
+.sortable-list.sorting-active::before {
+    display: block;
+}
+
+.sortable-list.empty-list {
+    min-height: 100px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px dashed #dee2e6;
+    border-radius: 0.375rem;
+    color: #6c757d;
+}
+
+/* Estilos para indicadores de arrastre */
+.sortable-list .sortable-placeholder {
+    background-color: #e9ecef;
+    border: 1px dashed #adb5bd;
+    border-radius: 0.375rem;
+    margin: 0.25rem 0;
+    visibility: visible !important;
+}
+
+/* Estilo para el modo de edición */
+.sortable-list .list-group-item.editing {
+    background-color: #e8f4ff;
+    border-color: #b8daff;
+}
+
+/* Estilo para indicador de elemento arrastrándose */
+.sortable-list .list-group-item.dragging-item {
+    opacity: 0.6;
+}
+
+/* Mejoras de accesibilidad */
+.sortable-list .list-group-item:focus {
+    outline: none;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}

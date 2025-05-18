@@ -1,7 +1,7 @@
 from django import forms
 
-from apps.base.models.company import Company
-
+from apps.base.models.company import Company, CompanyArea
+from django.utils.translation import gettext as _
 class CompanyForm(forms.ModelForm):
     class Meta:
         model = Company
@@ -36,3 +36,36 @@ class CompanyForm(forms.ModelForm):
             if not field.required:
                 if field.label:
                     field.label += ' (Opcional)'
+
+
+class CompanyAreaForm(forms.ModelForm):
+    """
+    Formulario para la creación y edición de áreas de la empresa
+    """
+    class Meta:
+        model = CompanyArea
+        fields = ['company', 'name', 'description', 'default_manager']
+        labels = {
+            'company':_('Compañia'),
+            'name':_('Nombre'),
+            'description':_('Descripcion'),
+            'default_manager':_('Responsable')
+        }
+        widgets = {
+            'company': forms.Select(attrs={'class': 'form-select select2'}),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'default_manager': forms.Select(attrs={'class': 'form-select select2'})
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Si solo hay una compañía, seleccionarla por defecto
+        if Company.objects.count() == 1:
+            self.fields['company'].initial = Company.objects.first()
+            self.fields['company'].widget.attrs['readonly'] = True
+        
+        # Si el usuario no tiene permiso para cambiar la compañía
+        # self.fields['company'].disabled = True  # Descomentar si es necesario
+

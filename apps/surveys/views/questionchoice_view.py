@@ -26,6 +26,10 @@ class QuestionChoiceCreateView(LoginRequiredMixin, PermissionRequiredMixin, Crea
     form_class = QuestionChoiceForm
     template_name = 'core/create.html'
     
+    def get_initial(self):
+        initial = super().get_initial()
+        self.question = get_object_or_404(Question, pk=self.kwargs.get('question_id'))
+        initial['question'] = self.question
     
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()

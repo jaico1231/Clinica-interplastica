@@ -1,0 +1,333 @@
+{% extends "surveys/base.html" %}
+{% load i18n %}
+{% load static %}
+{% load custom_filters %}
+
+{% block page_title %}{{ survey.title }} - {% trans "Detalle de la Encuesta" %}{% endblock %}
+
+{% block header %}{{ survey.title }}{% endblock %}
+
+{% block extra_css %}
+<!-- CSS para preguntas jerárquicas y ordenamiento -->
+<link rel="stylesheet" href="{% static 'assets/css/surveys/sortable.css' %}">
+
+<style>
+  /* Corregir ancho del botón desplegable */
+  .dropdown-toggle-split {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  
+  /* Estilo mejorado para el dropdown */
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+  }
+  
+  .dropdown-item i {
+    margin-right: 0.5rem;
+    width: 1rem;
+    text-align: center;
+  }
+  
+  /* Estilo para el elemento de eliminación */
+  .dropdown-item.text-danger:hover, 
+  .dropdown-item.text-danger:focus {
+    background-color: #f8d7da;
+  }
+  
+  /* Mejorar estilos de tabla */
+  .table .handle {
+    cursor: move;
+  }
+  
+  .table .handle i {
+    opacity: 0.6;
+    transition: opacity 0.2s;
+  }
+  
+  .table tr:hover .handle i {
+    opacity: 1;
+  }
+  
+  /* Estilos para los badges de tipos de pregunta */
+  .question-type-badge {
+    font-size: 0.75rem;
+  }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<!-- Cabecera con Detalles del Cuestionario -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <p class="text-muted">
+            {% if survey.is_published %}
+            <span class="badge bg-success">{% trans "Publicado" %}</span>
+            {% else %}
+            <span class="badge bg-secondary">{% trans "Borrador" %}</span>
+            {% endif %}
+            {% if survey.start_date and survey.end_date %}
+            <span class="ms-2">{% trans "Período activo:" %} {{ survey.start_date|date:"d M, Y" }} - {{ survey.end_date|date:"d M, Y" }}</span>
+            {% endif %}
+        </p>
+        <div class="mb-3">{{ survey.description|linebreaks }}</div>
+    </div>
+    <div class="col-md-4 text-md-end d-flex flex-column justify-content-between">
+        <div>
+            <h4>{% trans "Estadísticas de la Encuesta" %}</h4>
+            <p><strong>{% trans "Preguntas:" %}</strong> {{ survey.question_count }}</p>
+            <p><strong>{% trans "Respuestas:" %}</strong> {{ response_count }}</p>
+        </div>
+        
+        <!-- Botón de edición con menú desplegable -->
+        <div class="btn-group">
+            <a href="{% url 'encuestas:survey_update' survey.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil-square"></i> {% trans "Editar" %}
+            </a>
+            <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="visually-hidden">{% trans "Mostrar opciones" %}</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                {% if not survey.is_published %}
+                <li>
+                    <a href="javascript:void(0);" class="dropdown-item PublishBtn">
+                        <i class="bi bi-check2-circle"></i> {% trans "Publicar Encuesta" %}
+                    </a>
+                </li>
+                {% else %}
+                <li>
+                    <a href="javascript:void(0);" class="dropdown-item UnpublishBtn">
+                        <i class="bi bi-x-circle"></i> {% trans "Despublicar Encuesta" %}
+                    </a>
+                </li>
+                {% endif %}
+                <li>
+                    <a href="javascript:void(0);" class="dropdown-item PreviewBtn">
+                        <i class="bi bi-eye"></i> {% trans "Vista Previa" %}
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0);" class="dropdown-item ResponsesBtn">
+                        <i class="bi bi-list-ul"></i> {% trans "Ver Respuestas" %}
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0);" class="dropdown-item ExportBtn">
+                        <i class="bi bi-download"></i> {% trans "Exportar Encuesta" %}
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a href="javascript:void(0);" class="dropdown-item text-danger DelBtn">
+                        <i class="bi bi-trash"></i> {% trans "Eliminar Encuesta" %}
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+<!-- Fin Cabecera con Detalles del Cuestionario -->
+
+<!-- Sección de Preguntas -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="h4 mb-0">{% trans "Preguntas de la Encuesta" %}</h2>
+        <div>
+            <button type="button" class="btn btn-sm btn-success AddQuestionBtn">
+                <i class="bi bi-plus-circle"></i> {% trans "Añadir Pregunta" %}
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if questions %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th width="5%">#</th>
+                            <th width="40%">{% trans "Pregunta" %}</th>
+                            <th width="15%">{% trans "Tipo" %}</th>
+                            <th width="10%">{% trans "Obligatorio" %}</th>
+                            <th width="15%">{% trans "Opciones" %}</th>
+                            <th width="15%" class="text-end">{% trans "Acciones" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="questions-list" class="sortable">
+                        {% for question in questions %}
+                        <tr id="question-{{ question.id }}" data-id="{{ question.id }}">
+                            <td class="handle"><i class="bi bi-grip-vertical text-muted"></i> {{ question.order }}</td>
+                            <td>
+                                <strong>{{ question.text }}</strong>
+                                {% if question.help_text %}
+                                    <p class="text-muted small mb-0">{{ question.help_text }}</p>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if question.question_type.name == 'HIERARCHY' %}
+                                <span class="badge bg-info question-type-badge">{% trans "ORDENAMIENTO" %}</span>
+                                {% elif question.question_type.name == 'YES_NO' %}
+                                <span class="badge bg-info question-type-badge">{% trans "SI / NO" %}</span>
+                                {% elif question.question_type.name == 'SINGLE_CHOICE' %}
+                                <span class="badge bg-info question-type-badge">{% trans "UNICA OPCION" %}</span>
+                                {% elif question.question_type.name == 'MULTIPLE_CHOICE' %}
+                                <span class="badge bg-info question-type-badge">{% trans "MULTIPLE OPCION" %}</span>
+                                {% elif question.question_type.name == 'RATING' %}
+                                <span class="badge bg-info question-type-badge">{% trans "CALIFICACION" %}</span>
+                                {% elif question.question_type.name == 'TEXT' %}
+                                <span class="badge bg-info question-type-badge">{% trans "TEXTO" %}</span>
+                                {% elif question.question_type.name == 'NUMBER' %}
+                                <span class="badge bg-info question-type-badge">{% trans "NUMERICO" %}</span>
+                                {% elif question.question_type.name == 'DATE' %}
+                                <span class="badge bg-info question-type-badge">{% trans "FECHA" %}</span>
+                                {% elif question.question_type.name == 'TEXT_AREA' %}
+                                <span class="badge bg-info question-type-badge">{% trans "TEXTO AMPLIO" %}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if question.is_required %}
+                                <span class="badge bg-info">{% trans "Obligatorio" %}</span>
+                                {% else %}
+                                <span class="badge bg-light text-dark">{% trans "Opcional" %}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if question.has_choices %}
+                                    <a href="{% url 'encuestas:question_detail' question.id %}" class="btn btn-sm btn-outline-info">
+                                        <i class="bi bi-list-ul me-1"></i> {{ question.choices.count }} {% trans "opciones" %}
+                                    </a>
+                                {% elif question.question_type.name == 'HIERARCHY' %}
+                                    <button type="button" class="btn btn-sm btn-outline-info ViewHierarchyItemsBtn" data-question-id="{{ question.id }}">
+                                        <i class="bi bi-diagram-3 me-1"></i> {{ question.hierarchy_items.count }} {% trans "elementos" %}
+                                    </button>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'encuestas:question_update' question.id %}" class="btn btn-outline-primary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger DeleteQuestionBtn" 
+                                            data-question-id="{{ question.id }}"
+                                            data-question-text="{{ question.text }}">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <div class="mb-3">
+                    <i class="bi bi-card-checklist text-muted" style="font-size: 3rem;"></i>
+                </div>
+                <h3>{% trans "No hay preguntas añadidas todavía" %}</h3>
+                <p class="text-muted">{% trans "Comienza a construir tu encuesta añadiendo preguntas." %}</p>
+                <button type="button" class="btn btn-primary mt-2 FirstQuestionBtn">
+                    <i class="bi bi-plus-circle"></i> {% trans "Añadir Tu Primera Pregunta" %}
+                </button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+<!-- Fin Sección de Preguntas -->
+
+<!-- Modal para confirmar eliminación de preguntas -->
+<div class="modal fade" id="deleteQuestionModal" tabindex="-1" aria-labelledby="deleteQuestionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteQuestionModalLabel">{% trans "Confirmar Eliminación" %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>{% trans "¿Está seguro que desea eliminar la pregunta?" %}</p>
+                <p id="question-to-delete" class="fw-bold"></p>
+                <p class="text-danger">{% trans "Esta acción no se puede deshacer y eliminará también todas las respuestas asociadas a esta pregunta." %}</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancelar" %}</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteQuestion">{% trans "Eliminar" %}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para elementos jerárquicos -->
+<div class="modal fade" id="hierarchyItemsModal" tabindex="-1" aria-labelledby="hierarchyItemsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="hierarchyItemsModalLabel">{% trans "Gestionar Elementos de Ordenamiento" %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="hierarchy-items-container">
+                    <div class="d-flex justify-content-between mb-3">
+                        <h6>{% trans "Elementos a ordenar" %}</h6>
+                        <button type="button" class="btn btn-sm btn-success" id="addHierarchyItemBtn">
+                            <i class="bi bi-plus-circle"></i> {% trans "Añadir Elemento" %}
+                        </button>
+                    </div>
+                    <div id="hierarchy-items-list" class="sortable-list list-group">
+                        <!-- Los elementos se cargarán dinámicamente aquí -->
+                    </div>
+                    <div class="mt-3" id="empty-hierarchy-message" style="display: none;">
+                        <p class="text-center text-muted">{% trans "No hay elementos añadidos todavía." %}</p>
+                    </div>
+                </div>
+                
+                <form id="hierarchyItemForm" class="mt-4" style="display: none;">
+                    <h6 id="hierarchyItemFormTitle">{% trans "Añadir Elemento" %}</h6>
+                    <input type="hidden" id="hierarchyItemId" value="">
+                    <div class="mb-3">
+                        <label for="hierarchyItemText" class="form-label">{% trans "Texto del elemento" %}</label>
+                        <input type="text" class="form-control" id="hierarchyItemText" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="hierarchyItemDescription" class="form-label">{% trans "Descripción (opcional)" %}</label>
+                        <textarea class="form-control" id="hierarchyItemDescription" rows="2"></textarea>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-secondary me-2" id="cancelHierarchyItemBtn">{% trans "Cancelar" %}</button>
+                        <button type="submit" class="btn btn-primary" id="saveHierarchyItemBtn">{% trans "Guardar" %}</button>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cerrar" %}</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Define URLs for JavaScript
+    const SURVEY_URLS = {
+        edit: "{% url 'encuestas:survey_update' survey.id %}",
+        publish: "{% url 'encuestas:survey_publish' survey.id %}",
+        unpublish: "{% url 'encuestas:survey_unpublish' survey.id %}",
+        preview: "{% url 'encuestas:survey_preview' survey.id %}",
+        responses: "{% url 'encuestas:survey_responses' survey.id %}",
+        export: "{% url 'encuestas:survey_pdf_export' survey.id %}?format=pdf",
+        delete: "{% url 'encuestas:survey_delete' survey.id %}",
+        addQuestion: "{% url 'encuestas:question_create' survey.id %}",
+        getHierarchyItems: "/api/questions/{questionId}/hierarchy-items/",
+        updateHierarchyItem: "/api/hierarchy-items/{itemId}/update/",
+        deleteHierarchyItem: "/api/hierarchy-items/{itemId}/delete/",
+        reorderHierarchyItems: "/api/questions/{questionId}/hierarchy-items/reorder/",
+        deleteQuestion: "/api/questions/{questionId}/delete/",
+    };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+<script src="{% static 'assets/js/surveys/survey_detail.js' %}"></script>
+<script src="{% static 'assets/js/surveys/hierarchy_management.js' %}"></script>
+{% endblock %}

@@ -134,6 +134,23 @@ AUDIT_MODELS = [
     'base.NoveltyType',
     'base.RetirementType',
     
+    # Modelos de contabilidad
+    'accounting.AccountingPeriod',
+    'accounting.Journal',
+    'accounting.JournalEntry',
+    'accounting.JournalEntryLine',
+    'accounting.Naturaleza',
+    'accounting.GrupoCuenta',
+    'accounting.CuentaMayor',
+    'accounting.SubCuenta',
+    'accounting.CuentaDetalle',
+    'accounting.CuentaAuxiliar',
+    'accounting.TaxType',
+    'accounting.TaxRate',
+    'accounting.WithholdingTaxType',
+    'accounting.WithholdingTaxConcept',
+    'accounting.CompanyTaxConfig',
+    
     # Notifiacaciones
     'notifications.EmailConfiguration',
     'notifications.SMSConfiguration',

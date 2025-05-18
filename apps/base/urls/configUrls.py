@@ -1,6 +1,6 @@
 # configUrls.py
 from django.urls import path
-from apps.base.views.company import CompanyCreateView, CompanyUpdateView
+from apps.base.views.company import CompanyAreaCreateView, CompanyAreaDeleteView, CompanyAreaExportView, CompanyAreaImportView, CompanyAreaListView, CompanyAreaUpdateView, CompanyCreateView, CompanyUpdateView, get_companyarea_details
 from apps.base.views.genericcsvimportview import GenericCSVImportView
 from apps.base.views.genericexportview import GenericExportView
 from apps.base.views.genericviews import LoadCitiesView, LoadStatesView 
@@ -45,7 +45,15 @@ urlpatterns = [
     path('menuitems/<int:pk>/edit/', login_required(MenuItemUpdateView.as_view()), name='menuitem_edit'),
 
     path('company/int:pk',login_required(add_menu_name('EMPRESA','location_city')(CompanyUpdateView.as_view())), name='company_update'),
-    path('company/areas/', login_required(add_menu_name('AREAS','location_city')(.as_view())), name='company_create'),
+
+    path('company/areas/', login_required(add_menu_name('LISTADO AREAS','location_city')(CompanyAreaListView.as_view())), name='companyarea_list'),
+    path('company/areas/create/', login_required(CompanyAreaCreateView.as_view()), name='companyarea_create'),
+    path('companyarea/update/<int:pk>/', CompanyAreaUpdateView.as_view(), name='companyarea_update'),
+    path('companyarea/delete/<int:pk>/', CompanyAreaDeleteView.as_view(), name='companyarea_delete'),
+    # path('companyarea/import/', CompanyAreaImportView.as_view(), name='companyarea_import'),
+    # path('companyarea/export/', CompanyAreaExportView.as_view(), name='companyarea_export'),
+    path('companyarea/details/', get_companyarea_details, name='companyarea_details'),
+
     path('toggle-status/<str:app_name>/<str:model_name>/<int:pk>/', GenericToggleActiveStatusView.as_view(), name='toggle_active_status'),
     
 

@@ -1,0 +1,223 @@
+{% extends 'surveys/base.html' %}
+{% block title %}Preguntas - {{ survey.title }}{% endblock %}
+{% block header %}
+Preguntas de {{ survey.title }}
+<a href="{% url 'encuestas:question_create' survey.pk %}" class="btn btn-success float-end">
+<i class="fas fa-plus"></i> Nueva Pregunta
+</a>
+{% endblock %}
+{% block content %}
+<div class="mb-3">
+<a href="{% url 'encuestas:survey_detail' survey.pk %}" class="btn btn-secondary">
+<i class="fas fa-arrow-left"></i> Volver a la Encuesta
+</a>
+</div>
+<div class="card">
+    <div class="card-body">
+        {% if questions %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th width="5%">Orden</th>
+                            <th width="25%">Pregunta</th>
+                            <th width="15%">Tipo</th>
+                            <th width="10%">Obligatoria</th>
+                            <th width="15%">Dependencia</th>
+                            <th width="15%">Opciones</th>
+                            <th width="15%">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sortable-questions">
+                        {% for question in questions %}
+                            <tr data-id="{{ question.id }}">
+                                <td>{{ question.order }}</td>
+                                <td>{{ question.text }}</td>
+                                <td>{{ question.question_type.name }}</td>
+                                <td>
+                                    {% if question.is_required %}
+                                        <span class="badge bg-danger">Sí</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">No</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if question.dependent_on %}
+                                        <span class="badge bg-info">
+                                            Depende de Q{{ question.dependent_on.order }}
+                                            <br>
+                                            (Valor: {{ question.dependent_value }})
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if question.has_choices %}
+                                        {% with choices=question.choices.all %}
+                                            {% if choices %}
+                                                <button type="button" class="btn btn-sm btn-outline-info view-options-btn" data-bs-toggle="modal" data-bs-target="#choicesModal{{ question.id }}">
+                                                    Ver {{ choices|length }} opciones
+                                                </button>
+                                                
+                                                <!-- Modal para ver opciones -->
+                                                <div class="modal fade" id="choicesModal{{ question.id }}" tabindex="-1" aria-labelledby="choicesModalLabel{{ question.id }}" aria-hidden="true">
+                                                    <div class="modal-dialog">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title" id="choicesModalLabel{{ question.id }}">Opciones para "{{ question.text }}"</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <table class="table table-sm">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>Orden</th>
+                                                                            <th>Texto</th>
+                                                                            <th>Valor</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {% for choice in choices %}
+                                                                            <tr>
+                                                                                <td>{{ choice.order }}</td>
+                                                                                <td>{{ choice.text }}</td>
+                                                                                <td><code>{{ choice.value }}</code></td>
+                                                                            </tr>
+                                                                        {% endfor %}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            {% else %}
+                                                <span class="text-danger">Sin opciones</span>
+                                            {% endif %}
+                                        {% endwith %}
+                                    {% else %}
+                                        <span class="text-muted">No aplica</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'encuestas:question_update' question.pk %}" class="btn btn-warning" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="{% url 'encuestas:question_delete' question.pk %}" class="btn btn-danger" title="Eliminar">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                No hay preguntas en esta encuesta. 
+                <a href="{% url 'encuestas:question_create' survey.pk %}">Crea tu primera pregunta</a>.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Asegurar que Bootstrap esté correctamente inicializado
+        if (typeof bootstrap === 'undefined') {
+            console.error('Bootstrap no está disponible. Verifica que has incluido bootstrap.bundle.min.js');
+            
+            // Fallback manual para abrir modales si Bootstrap no está disponible
+            document.querySelectorAll('.view-options-btn').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    const targetId = this.getAttribute('data-bs-target');
+                    const modalElement = document.querySelector(targetId);
+                    if (modalElement) {
+                        modalElement.classList.add('show');
+                        modalElement.style.display = 'block';
+                        document.body.classList.add('modal-open');
+                        
+                        // Crear backdrop
+                        const backdrop = document.createElement('div');
+                        backdrop.classList.add('modal-backdrop', 'fade', 'show');
+                        document.body.appendChild(backdrop);
+                        
+                        // Agregar manejadores para cerrar
+                        const closeButtons = modalElement.querySelectorAll('[data-bs-dismiss="modal"]');
+                        closeButtons.forEach(function(closeBtn) {
+                            closeBtn.addEventListener('click', function() {
+                                modalElement.classList.remove('show');
+                                modalElement.style.display = 'none';
+                                document.body.classList.remove('modal-open');
+                                document.body.removeChild(backdrop);
+                            });
+                        });
+                    }
+                });
+            });
+        } else {
+            // Inicializar correctamente los modales con Bootstrap
+            const modalElements = document.querySelectorAll('.modal');
+            modalElements.forEach(function(modalElement) {
+                new bootstrap.Modal(modalElement);
+            });
+        }
+        
+        // Habilitar ordenamiento por arrastrar y soltar
+        const sortableQuestions = document.getElementById('sortable-questions');
+        if (sortableQuestions) {
+            new Sortable(sortableQuestions, {
+                animation: 150,
+                ghostClass: 'bg-light',
+                onEnd: function(evt) {
+                    // Aquí se implementaría la lógica para guardar el nuevo orden
+                    console.log('Se reordenó:', evt.oldIndex, evt.newIndex);
+                    
+                    // Recolectar los nuevos IDs ordenados
+                    const newOrder = [];
+                    document.querySelectorAll('#sortable-questions tr').forEach(function(row) {
+                        newOrder.push(row.getAttribute('data-id'));
+                    });
+                    
+                    // Aquí podrías implementar una llamada AJAX para guardar el nuevo orden
+                    console.log('Nuevo orden:', newOrder);
+                    
+                    // Ejemplo de cómo enviar el nuevo orden al servidor (descomentar para usar)
+                    /*
+                    fetch('/surveys/questions/reorder/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        },
+                        body: JSON.stringify({
+                            survey_id: {{ survey.pk }},
+                            question_order: newOrder
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Actualizar los números de orden en la UI
+                            const rows = document.querySelectorAll('#sortable-questions tr');
+                            for (let i = 0; i < rows.length; i++) {
+                                rows[i].querySelector('td:first-child').textContent = i + 1;
+                            }
+                        } else {
+                            alert('Error al guardar el nuevo orden');
+                        }
+                    });
+                    */
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
